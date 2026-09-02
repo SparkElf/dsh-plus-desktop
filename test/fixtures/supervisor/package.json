@@ -1,0 +1,11 @@
+{
+  "name": "@sparkelf/dsh-plugin-supervisor",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./client": "./client.mjs",
+    "./manifest": "./manifest.mjs",
+    "./bin": "./bin.mjs",
+    "./state": "./state.mjs"
+  }
+}

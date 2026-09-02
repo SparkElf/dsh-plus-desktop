@@ -1,0 +1,37 @@
+{
+  "name": "@sparkelf/dsh-plus-desktop",
+  "version": "0.1.0",
+  "description": "Optional Electron tray client for the standalone DeepSeek Harness Plus Supervisor",
+  "type": "module",
+  "main": "./runtime/main.mjs",
+  "exports": {
+    ".": "./runtime/main.mjs",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "runtime/**/*.mjs",
+    "build/icon.png",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "pack:check": "node scripts/verify-pack.mjs"
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SparkElf/dsh-plus-desktop.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@sparkelf/dsh-plugin-supervisor": "0.1.0"
+  },
+  "packageManager": "pnpm@11.7.0"
+}

@@ -1,0 +1,15 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@sparkelf/dsh-plugin-supervisor':
+        specifier: 0.1.0
+        version: link:test/fixtures/supervisor
+
+  test/fixtures/supervisor: {}
