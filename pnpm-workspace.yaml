@@ -1,0 +1,6 @@
+packages:
+  - '.'
+  - 'test/fixtures/*'
+
+linkWorkspacePackages: true
+preferWorkspacePackages: true
