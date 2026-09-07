@@ -1,7 +1,7 @@
 {
   "name": "@sparkelf/dsh-plus-desktop",
-  "version": "0.1.1",
-  "description": "Optional Electron tray client for the standalone DeepSeek Harness Plus Supervisor",
+  "version": "0.2.0-rc.1",
+  "description": "Installable Electron desktop for DeepSeek Harness Plus 0.1.0-rc.22",
   "type": "module",
   "main": "./runtime/main.mjs",
   "exports": {
@@ -17,7 +17,19 @@
   ],
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "pack:check": "node scripts/verify-pack.mjs"
+    "pack:check": "node scripts/verify-pack.mjs",
+    "dev": "electron src/main.mjs",
+    "preview": "node scripts/preview-installer.mjs",
+    "package:dir": "pnpm run prepare:runtime && electron-builder --dir",
+    "package:linux": "pnpm run prepare:runtime && electron-builder --linux",
+    "package:mac": "pnpm run prepare:runtime && electron-builder --mac",
+    "package:win": "pnpm run prepare:runtime && electron-builder --win",
+    "test:electron": "pnpm run prepare:runtime && playwright test --config=playwright.config.mjs",
+    "verify:unpacked-imports": "node scripts/verify-unpacked-imports.mjs",
+    "package": "pnpm run prepare:runtime && electron-builder",
+    "prepare:closure": "node scripts/prepare-closure.mjs",
+    "prepare:runtime": "pnpm run prepare:closure && node scripts/prepare-node-runtime.mjs",
+    "test:install": "pnpm run prepare:runtime && playwright test --config=playwright.config.mjs --grep \"installer completes a native Harness installation\""
   },
   "engines": {
     "node": "^22.19.0 || >=24.0.0"
@@ -31,7 +43,92 @@
     "access": "public"
   },
   "dependencies": {
-    "@sparkelf/dsh-plugin-supervisor": "0.1.1"
+    "@sparkelf/dsh-plugin-supervisor": "https://github.com/SparkElf/deepseek-harness-plus/releases/download/plus-v0.6.0/sparkelf-dsh-plugin-supervisor-0.1.3.tgz",
+    "adm-zip": "^0.6.0",
+    "pnpm": "11.7.0",
+    "yaml": "^2.9.0"
   },
-  "packageManager": "pnpm@11.7.0"
+  "packageManager": "pnpm@11.7.0",
+  "author": {
+    "name": "SparkElf",
+    "email": "58362707+SparkElf@users.noreply.github.com"
+  },
+  "homepage": "https://github.com/SparkElf/dsh-plus-desktop#readme",
+  "desktopName": "deepseek-harness-plus",
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.0",
+    "playwright": "^1.49.0"
+  },
+  "build": {
+    "appId": "io.sparkelf.deepseek-harness-plus",
+    "productName": "DeepSeek Harness Plus",
+    "executableName": "DeepSeekHarnessPlus",
+    "icon": "build/icon.png",
+    "extraMetadata": {
+      "main": "src/main.mjs"
+    },
+    "files": [
+      "src/**/*",
+      "renderer/**/*",
+      "progress/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "src/**/*.mjs",
+      "node_modules/yaml/**",
+      "node_modules/pnpm/**",
+      "node_modules/@sparkelf/dsh-plugin-supervisor/**"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "artifactName": "deepseek-harness-plus-${version}.${ext}",
+      "category": "Development",
+      "syncDesktopName": true,
+      "maintainer": "SparkElf <58362707+SparkElf@users.noreply.github.com>"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "DeepSeek.Harness.Plus.Setup.${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "include": "build/installer.nsh"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "artifactName": "deepseek-harness-plus-${version}.${ext}",
+      "category": "public.app-category.developer-tools"
+    },
+    "extraResources": [
+      {
+        "from": "vendor/plus-rc22",
+        "to": "plus-closure",
+        "filter": [
+          "*.tgz",
+          "plus-closure.json"
+        ]
+      },
+      {
+        "from": "vendor/node",
+        "to": "node-runtime",
+        "filter": [
+          "node",
+          "node.exe",
+          "LICENSE",
+          "runtime.json"
+        ]
+      }
+    ]
+  }
 }

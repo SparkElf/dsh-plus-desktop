@@ -2,11 +2,10 @@ import assert from 'node:assert/strict'
 import { setImmediate as waitForImmediate } from 'node:timers/promises'
 import test from 'node:test'
 
-import { state, resetSupervisorFixture } from '@sparkelf/dsh-plugin-supervisor/state'
 import { runPlusDesktop } from '../runtime/main.mjs'
 
 test('mounts a tray and delegates commands to the configured Supervisor', async () => {
-  resetSupervisorFixture()
+  const state = { commands: [] }
   let template
   let icon
   const opened = []
@@ -29,7 +28,18 @@ test('mounts a tray and delegates commands to the configured Supervisor', async 
     Tray,
   }
 
-  const mounted = await runPlusDesktop(electron, { manifestPath: '/tmp/runtime.json' })
+  const supervisor = {
+    async readManifest() { return { socketPath: '/tmp/runtime.sock', port: 3080, supervisorPort: 3082, build: {} } },
+    async available() { return true },
+    async send(_socketPath, command) {
+      state.commands.push(command)
+      return { state: command === 'stop' ? 'stopped' : 'running' }
+    },
+    async wait() { return { state: 'running' } },
+    entry: '/tmp/supervisor.mjs',
+    spawn() { assert.fail('unexpected Supervisor spawn') },
+  }
+  const mounted = await runPlusDesktop(electron, { manifestPath: '/tmp/runtime.json', supervisor })
   assert.equal(mounted.supervisorProcess, undefined)
   assert.equal(mounted.tray.title, 'DeepSeek Harness Plus')
   assert.match(mounted.tray.toolTip, /Harness running/)

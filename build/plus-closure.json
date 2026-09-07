@@ -1,0 +1,195 @@
+{
+  "release": "plus-npm-v0.1.0-rc.22",
+  "sourceRevision": "d347e703908d0406b7a7ef80e3a0e594d86b2215",
+  "packages": [
+    {
+      "name": "@sparkelf/dsh-api-client",
+      "version": "0.4.2",
+      "file": "sparkelf-dsh-api-client-0.4.2.tgz",
+      "sha256": "283f3c3164b64cc13f5f1a5ce040c7c566773f00a31b34f303af363625378c2a",
+      "profileDependency": false
+    },
+    {
+      "name": "@sparkelf/dsh-mineru",
+      "version": "0.1.0",
+      "file": "sparkelf-dsh-mineru-0.1.0.tgz",
+      "sha256": "aee6965cbd2eb5f316fb7b99f5f0b39180c267654ce2acee91b371ce1d9bcfa2",
+      "profileDependency": false
+    },
+    {
+      "name": "@sparkelf/dsh-office-viewer-fonts",
+      "version": "0.1.0",
+      "file": "sparkelf-dsh-office-viewer-fonts-0.1.0.tgz",
+      "sha256": "5160c86da233b06c1dbfbd622931686a4ba6955807b3f618e9951f40f84b5517",
+      "profileDependency": false
+    },
+    {
+      "name": "@sparkelf/dsh-officecli",
+      "version": "0.1.0",
+      "file": "sparkelf-dsh-officecli-0.1.0.tgz",
+      "sha256": "8f162dd1acd21b15ed29afe062974d861bed51d1aa071137443248d213b65b77",
+      "profileDependency": false
+    },
+    {
+      "name": "@sparkelf/dsh-patch-better-sidebar-office-viewer",
+      "version": "0.1.0-rc.22",
+      "file": "sparkelf-dsh-patch-better-sidebar-office-viewer-0.1.0-rc.22.tgz",
+      "sha256": "1845f0d095f86fe1b70cdaf08ecee33dadc37a29cbef481ba1a5b5781b6d0111",
+      "profileDependency": true
+    },
+    {
+      "name": "@sparkelf/dsh-patch-browser-auth-mode",
+      "version": "0.1.0-rc.22",
+      "file": "sparkelf-dsh-patch-browser-auth-mode-0.1.0-rc.22.tgz",
+      "sha256": "4045cd231615325a9d1018a4d8aa62682e600bac58158b77ac0e64fdf499c4c6",
+      "profileDependency": true
+    },
+    {
+      "name": "@sparkelf/dsh-patch-legacy-code-preset",
+      "version": "0.1.0-rc.22",
+      "file": "sparkelf-dsh-patch-legacy-code-preset-0.1.0-rc.22.tgz",
+      "sha256": "08e457fe9ebe750283893957c69c6e3737ca5a1822db7bff868befd60ba8d376",
+      "profileDependency": true
+    },
+    {
+      "name": "@sparkelf/dsh-patch-mobile-web-layout",
+      "version": "0.1.0-rc.22",
+      "file": "sparkelf-dsh-patch-mobile-web-layout-0.1.0-rc.22.tgz",
+      "sha256": "eb1d13c660594d1911535365d580c98b37a6c05ee554240ae800f69f22f51241",
+      "profileDependency": true
+    },
+    {
+      "name": "@sparkelf/dsh-patch-officecli-deliverables",
+      "version": "0.1.0-rc.22",
+      "file": "sparkelf-dsh-patch-officecli-deliverables-0.1.0-rc.22.tgz",
+      "sha256": "0ec9d22aaf29925d7b0618c0e8d22ef13f5c2cf45e143dc8ddefa19524854e83",
+      "profileDependency": true
+    },
+    {
+      "name": "@sparkelf/dsh-patch-ptc-mcp-schema-types",
+      "version": "0.1.0-rc.22",
+      "file": "sparkelf-dsh-patch-ptc-mcp-schema-types-0.1.0-rc.22.tgz",
+      "sha256": "fcf3333df57c6768dfaad55baafd1a0154ca6d32264a05a69c399b8689753565",
+      "profileDependency": true
+    },
+    {
+      "name": "@sparkelf/dsh-patch-responses-reasoning-status",
+      "version": "0.1.0-rc.22",
+      "file": "sparkelf-dsh-patch-responses-reasoning-status-0.1.0-rc.22.tgz",
+      "sha256": "dc691a0028ed0bed2145f578f00e1f153fd2a795309ead2d6b3148097a2b4bb9",
+      "profileDependency": true
+    },
+    {
+      "name": "@sparkelf/dsh-patch-session-export-chinese",
+      "version": "0.1.0-rc.22",
+      "file": "sparkelf-dsh-patch-session-export-chinese-0.1.0-rc.22.tgz",
+      "sha256": "9d57d214bffd3dbd11dba3e2f80a71387bf6edf3e84ddb05d295a61eb2faa0bb",
+      "profileDependency": true
+    },
+    {
+      "name": "@sparkelf/dsh-patch-session-history-search",
+      "version": "0.1.0-rc.22",
+      "file": "sparkelf-dsh-patch-session-history-search-0.1.0-rc.22.tgz",
+      "sha256": "74e4a490056f1a8422b63787012b5dd144a9fb1ab53219d720c873759799591b",
+      "profileDependency": true
+    },
+    {
+      "name": "@sparkelf/dsh-patch-session-log-trajectory-toolbar",
+      "version": "0.1.0-rc.22",
+      "file": "sparkelf-dsh-patch-session-log-trajectory-toolbar-0.1.0-rc.22.tgz",
+      "sha256": "f4b2554759f6834d0775cb6d628145bf8e7633aaa0972e4f71b968cf763b6004",
+      "profileDependency": true
+    },
+    {
+      "name": "@sparkelf/dsh-patch-subagent-settings-presets",
+      "version": "0.1.0-rc.22",
+      "file": "sparkelf-dsh-patch-subagent-settings-presets-0.1.0-rc.22.tgz",
+      "sha256": "4cea3e6c397e72df2ff4fff4d0df6aeebdbd09dcb29b676a17342775e9052089",
+      "profileDependency": true
+    },
+    {
+      "name": "@sparkelf/dsh-patch-web-base-path",
+      "version": "0.1.0-rc.22",
+      "file": "sparkelf-dsh-patch-web-base-path-0.1.0-rc.22.tgz",
+      "sha256": "f7dd5ae0ab38541d48b1fcc65c6a947995b3fe0aac401b16676e677e82da9b75",
+      "profileDependency": true
+    },
+    {
+      "name": "@sparkelf/dsh-patch-workspace-storage-restore",
+      "version": "0.1.0-rc.22",
+      "file": "sparkelf-dsh-patch-workspace-storage-restore-0.1.0-rc.22.tgz",
+      "sha256": "6cb350ca6db3150a23b1c0104c4f74acd744c513edb05e4036aad9fd275d4c55",
+      "profileDependency": true
+    },
+    {
+      "name": "@sparkelf/dsh-plugin-backup",
+      "version": "0.1.0-rc.22",
+      "file": "sparkelf-dsh-plugin-backup-0.1.0-rc.22.tgz",
+      "sha256": "441eb2542f27987e5f3eee2ea55ce175317633db9a3f3aa582dae34633dec38e",
+      "profileDependency": true
+    },
+    {
+      "name": "@sparkelf/dsh-plugin-dataops",
+      "version": "0.1.0-rc.22",
+      "file": "sparkelf-dsh-plugin-dataops-0.1.0-rc.22.tgz",
+      "sha256": "4f45cd790be7f6721434d7e59ffb8984d4d61cbc9607eaf177704e4c67813c5b",
+      "profileDependency": true
+    },
+    {
+      "name": "@sparkelf/dsh-plugin-mcp-credentials",
+      "version": "0.1.0-rc.22",
+      "file": "sparkelf-dsh-plugin-mcp-credentials-0.1.0-rc.22.tgz",
+      "sha256": "cb015c97d3864cb9eed72abbe048c2577245839365bd5d73dd26e84cd68809ec",
+      "profileDependency": true
+    },
+    {
+      "name": "@sparkelf/dsh-plugin-subagent-settings",
+      "version": "0.1.0-rc.22",
+      "file": "sparkelf-dsh-plugin-subagent-settings-0.1.0-rc.22.tgz",
+      "sha256": "fc4b1813507d07e9f54a7db614448009dbd0ff36926e80d463566134fbaee5cc",
+      "profileDependency": true
+    },
+    {
+      "name": "@sparkelf/dsh-plugin-supervisor",
+      "version": "0.1.3",
+      "file": "sparkelf-dsh-plugin-supervisor-0.1.3.tgz",
+      "sha256": "987e7b7401eb4a6839c8d6cef1a29e831a9dad804a4c546ac56d8f07d7ed5a90",
+      "profileDependency": false
+    },
+    {
+      "name": "@sparkelf/dsh-plus",
+      "version": "0.1.0-rc.22",
+      "file": "sparkelf-dsh-plus-0.1.0-rc.22.tgz",
+      "sha256": "f77aa77b263395ea972dd8fdca995b79823a2f7ff9b8f66e70c49ec7e754ffe6",
+      "profileDependency": true
+    },
+    {
+      "name": "@sparkelf/dsh-ssh-manager",
+      "version": "0.6.0",
+      "file": "sparkelf-dsh-ssh-manager-0.6.0.tgz",
+      "sha256": "6210b584c42dcd477b411a2a35bd3be91d7773f23d0be419443cf91f06d93a6d",
+      "profileDependency": false
+    },
+    {
+      "name": "@sparkelf/dsh-workbench-vault",
+      "version": "0.1.0",
+      "file": "sparkelf-dsh-workbench-vault-0.1.0.tgz",
+      "sha256": "be1c2b38a04d56efc7ceb4e04e280b82775ebc46b962e87839f21f28d36b026e",
+      "profileDependency": false
+    },
+    {
+      "name": "dsh-better-sidebar",
+      "version": "0.18.1",
+      "file": "dsh-better-sidebar-0.18.1.tgz",
+      "sha256": "b90374f569a521c34b619f3dffc7111441bc5ff48dbc9c7a8e05871cd3083cd2",
+      "profileDependency": false
+    },
+    {
+      "name": "dsh-sql-workbench",
+      "version": "0.4.0",
+      "file": "dsh-sql-workbench-0.4.0.tgz",
+      "sha256": "1b11df897b348394f3e0acbba2aee36b90ebeb058c3a145cc9def0f8aa86434a",
+      "profileDependency": false
+    }
+  ]
+}

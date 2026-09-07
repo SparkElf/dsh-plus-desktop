@@ -14,11 +14,19 @@ const supervisorEntry = fileURLToPath(import.meta.resolve('@sparkelf/dsh-plugin-
 /**
  * 把Plus tray挂载到调用方持有的Electron host；Desktop只委托Supervisor command。
  * @param {object} electron - caller-owned Electron module.
- * @param {{ manifestPath?: string }} [options] - Supervisor manifest selection.
+ * @param {{ manifestPath?: string, supervisor?: object }} [options] - Supervisor manifest and optional host adapter.
  * @returns {Promise<{ tray: object, supervisorProcess: object | undefined }>} mounted tray and launched process.
  */
 export async function runPlusDesktop(electron, options = {}) {
   const { app, dialog, Menu, nativeImage, shell, Tray } = electron
+  const supervisor = options.supervisor ?? {
+    readManifest: readSupervisorManifest,
+    available: supervisorAvailable,
+    send: sendSupervisorCommand,
+    wait: waitForSupervisor,
+    entry: supervisorEntry,
+    spawn,
+  }
   const manifestPath = options.manifestPath ?? join(homedir(), '.dsh', 'supervisor', 'runtime.json')
   await app.whenReady()
   const zh = app.getLocale().toLowerCase().startsWith('zh')
@@ -48,20 +56,20 @@ export async function runPlusDesktop(electron, options = {}) {
     failed: 'Supervisor operation failed',
   }
 
-  const manifest = await readSupervisorManifest(manifestPath)
+  const manifest = await supervisor.readManifest(manifestPath)
   let supervisorProcess
   let status
-  if (await supervisorAvailable(manifest.socketPath)) {
-    status = await sendSupervisorCommand(manifest.socketPath, 'status')
+  if (await supervisor.available(manifest.socketPath)) {
+    status = await supervisor.send(manifest.socketPath, 'status')
   } else {
-    supervisorProcess = spawn(process.execPath, [supervisorEntry, '--manifest', manifestPath], {
+    supervisorProcess = supervisor.spawn(process.execPath, [supervisor.entry, '--manifest', manifestPath], {
       detached: true,
       env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
       stdio: 'ignore',
       windowsHide: true,
     })
     supervisorProcess.unref()
-    status = await waitForSupervisor(manifest.socketPath)
+    status = await supervisor.wait(manifest.socketPath)
   }
 
   const tray = new Tray(nativeImage.createFromPath(iconPath))
@@ -69,7 +77,7 @@ export async function runPlusDesktop(electron, options = {}) {
 
   async function run(command) {
     try {
-      status = await sendSupervisorCommand(manifest.socketPath, command)
+      status = await supervisor.send(manifest.socketPath, command)
       refreshMenu()
     } catch (error) {
       console.error('[plus-desktop] Supervisor command failed', error)
