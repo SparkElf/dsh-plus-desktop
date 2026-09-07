@@ -35,7 +35,7 @@ After installation, the tray provides commands to open Harness and Supervisor pr
 
 ## Verification
 
-The repository runs the tray API test, npm pack boundary check, Electron installer UI system test, a real pinned Plus installation test, isolated unpacked-import resolution, and Linux/Windows electron-builder packaging. Release tags publish the npm tray package and attach platform installers to a Desktop GitHub prerelease.
+The required CI runs the tray API test, npm pack boundary check, Electron installer UI system test, isolated unpacked-import resolution, and Linux/Windows electron-builder packaging. The explicit `pnpm run test:install` acceptance performs the full pinned Plus source installation on a capable runner. Release tags publish the npm tray package and attach platform installers to a Desktop GitHub prerelease.
 
 ## Known Limitations
 

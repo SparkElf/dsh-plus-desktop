@@ -24,7 +24,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - run: pnpm run pack:check
-      - run: xvfb-run -a pnpm run test:electron
+      - run: pnpm run prepare:runtime
+      - run: xvfb-run -a pnpm exec playwright test --config=playwright.config.mjs --grep 'installer validates directory'
 
   package:
     needs: verify

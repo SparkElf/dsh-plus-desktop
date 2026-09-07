@@ -35,7 +35,7 @@ Desktop不复制Supervisor源码。native与WSL lifecycle commands使用Plus pro
 
 ## 验证
 
-仓库运行tray API测试、npm pack边界检查、Electron安装向导UI系统测试、真实固定Plus安装测试、隔离unpacked import解析以及Linux/Windows electron-builder打包。release tag会发布npm tray package，并把平台安装包附到Desktop GitHub prerelease。
+required CI运行tray API测试、npm pack边界检查、Electron安装向导UI系统测试、隔离unpacked import解析以及Linux/Windows electron-builder打包。显式`pnpm run test:install`验收会在具备足够资源的runner上执行完整固定Plus source安装。release tag会发布npm tray package，并把平台安装包附到Desktop GitHub prerelease。
 
 ## 已知限制
 

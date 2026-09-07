@@ -28,7 +28,8 @@
     "verify:unpacked-imports": "node scripts/verify-unpacked-imports.mjs",
     "package": "pnpm run prepare:runtime && electron-builder",
     "prepare:closure": "node scripts/prepare-closure.mjs",
-    "prepare:runtime": "pnpm run prepare:closure && node scripts/prepare-node-runtime.mjs"
+    "prepare:runtime": "pnpm run prepare:closure && node scripts/prepare-node-runtime.mjs",
+    "test:install": "pnpm run prepare:runtime && playwright test --config=playwright.config.mjs --grep \"installer completes a native Harness installation\""
   },
   "engines": {
     "node": "^22.19.0 || >=24.0.0"
