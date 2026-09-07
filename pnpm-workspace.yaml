@@ -1,6 +1,9 @@
 packages:
   - '.'
-  - 'test/fixtures/*'
+
+allowBuilds:
+  electron: true
+  electron-winstaller: true
 
 linkWorkspacePackages: true
 preferWorkspacePackages: true

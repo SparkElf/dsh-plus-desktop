@@ -6,11 +6,53 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+  id-token: write
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            script: package:linux
+            name: linux
+            assets: |
+              dist/*.AppImage
+              dist/*.deb
+          - runner: windows-2025
+            script: package:win
+            name: windows
+            assets: dist/*.exe
+    runs-on: ${{ matrix.runner }}
+    name: package / ${{ matrix.name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - if: matrix.name == 'linux'
+        run: xvfb-run -a pnpm run test:electron
+      - run: pnpm run ${{ matrix.script }}
+      - if: matrix.name == 'linux'
+        run: pnpm run verify:unpacked-imports
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.name }}
+          path: ${{ matrix.assets }}
+          if-no-files-found: error
+
+  publish-npm:
+    needs: package
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -23,6 +65,22 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test && pnpm run pack:check
-      - run: npm publish --access public
+      - run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  release:
+    needs: [package, publish-npm]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          path: dist
+          merge-multiple: true
+      - name: Publish Desktop prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease --generate-notes --title "DeepSeek Harness Plus Desktop $version"

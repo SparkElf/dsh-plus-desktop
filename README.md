@@ -1,24 +1,45 @@
 ---
-description: "Optional Electron tray client for a configured Plus Supervisor."
-kind: "package-reference"
+description: "Installable Windows and Linux desktop for a pinned DeepSeek Harness Plus profile."
+kind: "product-reference"
 ---
 
-# @sparkelf/dsh-plus-desktop
+# DeepSeek Harness Plus Desktop
 
 English | [中文](README.zh.md)
 
-## Summary
+## Install
 
-This optional Electron tray package reads an existing Plus Supervisor manifest, starts the standalone Supervisor when it is absent, and presents tray commands for opening Harness and its progress page or starting, stopping, restarting, and rebuilding the runtime. It contains no DSH source installer and does not own the Web child process.
+Desktop 0.2.0-rc.1 is the installable companion for `@sparkelf/dsh-plus@0.1.0-rc.22`. Download the platform installer from the matching GitHub Release:
 
-## Use This Package
+- Windows x64: `DeepSeek.Harness.Plus.Setup.0.2.0-rc.1.exe`
+- Linux x64: `deepseek-harness-plus-0.2.0-rc.1.AppImage`
+- Debian/Ubuntu x64: `deepseek-harness-plus-0.2.0-rc.1.deb`
 
-An Electron host imports <code>runPlusDesktop</code> and passes its Electron module plus an optional <code>manifestPath</code>. The default path is <code>~/.dsh/supervisor/runtime.json</code>. Closing the host leaves the Supervisor and Harness runtime running.
+The first-run wizard selects an installation directory, ports, proxy, model provider, and API credential. It fetches official DeepSeek Harness revision `d347e703908d0406b7a7ef80e3a0e594d86b2215`, installs the exact Plus distribution, applies its source patches, performs an official build, writes the isolated DSH home, and starts the external Supervisor. Existing user settings and data remain under the selected installation's `.dsh-plus/home`.
 
-## Model Experience
+The installer bundles Electron, a licensed standalone Node runtime, pnpm, and the 27 reviewed tarballs in the Plus rc.22 closure. The machine needs Git and network access to GitHub and npm during first installation. The wizard checks both requirements before changing the selected directory and supports HTTP, HTTPS, and SOCKS5 proxy URLs.
 
-Desktop adds no model content. A restart selected from its tray delegates to the Supervisor package, whose recovery prompt and token effect are documented in [the Supervisor README](https://github.com/SparkElf/dsh-plugins-plus/tree/master/packages/supervisor#english).
+## Release Binding
 
-## Known Limitations and Deferred Work
+This Desktop build has one immutable runtime selection:
 
-- Desktop manages an already materialized Plus runtime; installation remains owned by <code>@sparkelf/dsh-plus</code>.
+- Plus distribution: `@sparkelf/dsh-plus@0.1.0-rc.22`
+- Official source: `d347e703908d0406b7a7ef80e3a0e594d86b2215`
+- Supervisor: `@sparkelf/dsh-plugin-supervisor@0.1.3`
+
+Desktop does not copy Supervisor source. Native and WSL lifecycle commands use the published Supervisor package installed in the Plus profile. The public npm export remains `runPlusDesktop(electron, options)` for hosts that only need the tray client.
+
+## Desktop Workflow
+
+After installation, the tray provides commands to open Harness and Supervisor progress, start or stop Harness, restart it, rebuild and restart, repair the pinned installation, manage the selected release, open local data, and export or restore user backups. Closing the installer window keeps the tray available; quitting Desktop leaves ownership of the accepted runtime transition to Supervisor.
+
+## Verification
+
+The repository runs the tray API test, npm pack boundary check, Electron installer UI system test, a real pinned Plus installation test, isolated unpacked-import resolution, and Linux/Windows electron-builder packaging. Release tags publish the npm tray package and attach platform installers to a Desktop GitHub prerelease.
+
+## Known Limitations
+
+- 0.2.0-rc.1 installers are unsigned prerelease artifacts; Windows SmartScreen or Linux desktop security may require explicit confirmation.
+- macOS packaging remains disabled until the release has a signing and notarization identity.
+- First installation compiles the official Harness source on the target machine and therefore takes longer than an application-only installer.
+- Git is not bundled in this release.
