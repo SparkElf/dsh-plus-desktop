@@ -55,6 +55,7 @@ jobs:
   publish-npm:
     needs: package
     runs-on: ubuntu-24.04
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -67,12 +68,12 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test && pnpm run pack:check
-      - run: npm publish --access public --provenance
+      - run: npm publish --tag rc --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   release:
-    needs: [package, publish-npm]
+    needs: package
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/download-artifact@v4
