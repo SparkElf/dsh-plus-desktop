@@ -9,11 +9,11 @@ English | [中文](README.zh.md)
 
 ## Install
 
-Desktop 0.2.0-rc.2 is the installable companion for `@sparkelf/dsh-plus@0.1.0-rc.22`. Download the platform installer from the matching GitHub Release:
+Desktop 0.2.0-rc.3 is the installable companion for `@sparkelf/dsh-plus@0.1.0-rc.22`. Download the platform installer from the matching GitHub Release:
 
-- Windows x64: `DeepSeek.Harness.Plus.Setup.0.2.0-rc.2.exe`
-- Linux x64: `deepseek-harness-plus-0.2.0-rc.2.AppImage`
-- Debian/Ubuntu x64: `deepseek-harness-plus-0.2.0-rc.2.deb`
+- Windows x64: `DeepSeek.Harness.Plus.Setup.0.2.0-rc.3.exe`
+- Linux x64: `deepseek-harness-plus-0.2.0-rc.3.AppImage`
+- Debian/Ubuntu x64: `deepseek-harness-plus-0.2.0-rc.3.deb`
 
 The first-run wizard selects an installation directory, ports, proxy, model provider, and API credential. It fetches official DeepSeek Harness revision `d347e703908d0406b7a7ef80e3a0e594d86b2215`, installs the exact Plus distribution, applies its source patches, performs an official build, writes the isolated DSH home, and starts the external Supervisor. Existing user settings and data remain under the selected installation's `.dsh-plus/home`.
 
@@ -39,7 +39,7 @@ The required CI runs the tray API test, npm pack boundary check, Electron instal
 
 ## Known Limitations
 
-- 0.2.0-rc.2 installers are unsigned prerelease artifacts; Windows SmartScreen or Linux desktop security may require explicit confirmation.
+- 0.2.0-rc.3 installers are unsigned prerelease artifacts; Windows SmartScreen or Linux desktop security may require explicit confirmation.
 - macOS packaging remains disabled until the release has a signing and notarization identity.
 - First installation compiles the official Harness source on the target machine and therefore takes longer than an application-only installer.
 - Git is not bundled in this release.
