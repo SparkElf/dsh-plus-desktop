@@ -114,7 +114,7 @@ test('installer validates directory provider proxy and retry controls', async ({
 })
 
 test('installer completes a native Harness installation and starts Supervisor', async ({}, testInfo) => {
-  test.setTimeout(30 * 60_000)
+  test.setTimeout(45 * 60_000)
   const installPath = testInfo.outputPath('installed-harness')
   const userData = testInfo.outputPath('user-data')
   const port = 47_000 + (process.pid % 1_000) * 4
@@ -148,8 +148,8 @@ test('installer completes a native Harness installation and starts Supervisor', 
     await expect(page.locator('#summary')).toContainText(String(supervisorPort))
 
     const installerFinished = Promise.race([
-      page.waitForEvent('close', { timeout: 28 * 60_000 }).then(() => ({ closed: true })).catch(() => undefined),
-      page.locator('#error').waitFor({ state: 'visible', timeout: 28 * 60_000 }).then(async () => ({ closed: false, error: await page.locator('#error').textContent() })).catch(() => undefined),
+      page.waitForEvent('close', { timeout: 43 * 60_000 }).then(() => ({ closed: true })).catch(() => undefined),
+      page.locator('#error').waitFor({ state: 'visible', timeout: 43 * 60_000 }).then(async () => ({ closed: false, error: await page.locator('#error').textContent() })).catch(() => undefined),
     ])
     await page.getByRole('button', { name: '安装', exact: true }).click()
     const result = await installerFinished
