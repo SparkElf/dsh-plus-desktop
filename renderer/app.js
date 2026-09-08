@@ -15,7 +15,7 @@ const messages = {
     'placeholder.baseURL': '例如 https://api.example.com/v1',
     'reasoning.default': '默认', 'reasoning.low': '低', 'reasoning.medium': '中', 'reasoning.high': '高', 'reasoning.max': '最高',
     'summary.language': '语言', 'summary.theme': '主题', 'summary.location': '安装位置', 'summary.distribution': '发行版',
-    'summary.folder': '安装目录', 'summary.proxy': '下载代理', 'summary.overwrite': '安装方式', 'summary.provider': '模型提供方', 'summary.url': '服务地址', 'summary.model': '模型', 'summary.reasoning': '推理强度', 'summary.port': 'Harness 端口', 'summary.candidatePort': '测试 Harness 端口', 'summary.supervisorPort': 'Supervisor 端口', 'summary.candidateSupervisorPort': '测试 Supervisor 端口',
+    'summary.folder': '安装目录', 'summary.tools': '安装环境', 'summary.toolsBundledWindows': '已内置 Git、Node.js 和 pnpm', 'summary.toolsBundledNative': '已内置 Node.js 和 pnpm', 'summary.registry': '依赖下载', 'summary.registryFallback': 'npm 官方源，不可用时自动切换国内镜像', 'summary.proxy': '下载代理', 'summary.overwrite': '安装方式', 'summary.provider': '模型提供方', 'summary.url': '服务地址', 'summary.model': '模型', 'summary.reasoning': '推理强度', 'summary.port': 'Harness 端口', 'summary.candidatePort': '测试 Harness 端口', 'summary.supervisorPort': 'Supervisor 端口', 'summary.candidateSupervisorPort': '测试 Supervisor 端口',
     'error.location': '请选择安装目录。', 'error.ports': '四个端口必须是 1024 到 65535 之间的不同数字。', 'error.distribution': '请选择 WSL 发行版。', 'error.reservedPort': '该端口不可用，请选择其他端口。', 'error.proxy': '代理地址必须是 HTTP、HTTPS 或 SOCKS5 URL。',
     'error.model': '请填写 API 密钥和模型名称。', 'error.customName': '请填写服务名称。', 'error.customURL': '请填写服务地址。', 'error.customURLFormat': '服务地址必须是 HTTP 或 HTTPS URL。', 'error.distributions': '没有可用的 WSL 发行版。', 'error.preview': '预览页面不能选择本机目录或执行安装。',
     'placeholder.installPathNative': '例如 C:\\Users\\<用户名>\\DeepSeekHarnessPlus', 'placeholder.installPathWsl': '例如 /home/<用户名>/deepseek-harness-plus', 'placeholder.proxy': '例如 http://127.0.0.1:7890',
@@ -38,7 +38,7 @@ const messages = {
     'placeholder.baseURL': 'For example https://api.example.com/v1',
     'reasoning.default': 'Default', 'reasoning.low': 'Low', 'reasoning.medium': 'Medium', 'reasoning.high': 'High', 'reasoning.max': 'Max',
     'summary.language': 'Language', 'summary.theme': 'Theme', 'summary.location': 'Install location', 'summary.distribution': 'Linux distribution',
-    'summary.folder': 'Installation folder', 'summary.proxy': 'Download proxy', 'summary.overwrite': 'Install mode', 'summary.provider': 'Model provider', 'summary.url': 'Service URL', 'summary.model': 'Model', 'summary.reasoning': 'Reasoning', 'summary.port': 'Harness port', 'summary.candidatePort': 'Test Harness port', 'summary.supervisorPort': 'Supervisor port', 'summary.candidateSupervisorPort': 'Test Supervisor port',
+    'summary.folder': 'Installation folder', 'summary.tools': 'Installation environment', 'summary.toolsBundledWindows': 'Git, Node.js, and pnpm included', 'summary.toolsBundledNative': 'Node.js and pnpm included', 'summary.registry': 'Dependency downloads', 'summary.registryFallback': 'npm registry with automatic mainland mirror switching', 'summary.proxy': 'Download proxy', 'summary.overwrite': 'Install mode', 'summary.provider': 'Model provider', 'summary.url': 'Service URL', 'summary.model': 'Model', 'summary.reasoning': 'Reasoning', 'summary.port': 'Harness port', 'summary.candidatePort': 'Test Harness port', 'summary.supervisorPort': 'Supervisor port', 'summary.candidateSupervisorPort': 'Test Supervisor port',
     'error.location': 'Choose an installation folder.', 'error.ports': 'Use four different numbers between 1024 and 65535 for the ports.', 'error.distribution': 'Choose a Linux distribution.', 'error.reservedPort': 'This port is unavailable. Choose another port.', 'error.proxy': 'Use an HTTP, HTTPS, or SOCKS5 proxy URL.',
     'error.model': 'Enter an API key and model.', 'error.customName': 'Enter a service name.', 'error.customURL': 'Enter a service URL.', 'error.customURLFormat': 'The service URL must use HTTP or HTTPS.', 'error.distributions': 'No Linux distributions are available.', 'error.preview': 'The preview cannot choose local folders or install Harness.',
     'placeholder.installPathNative': 'For example C:\\Users\\<username>\\DeepSeekHarnessPlus', 'placeholder.installPathWsl': 'For example /home/<username>/deepseek-harness-plus', 'placeholder.proxy': 'For example http://127.0.0.1:7890',
@@ -410,6 +410,8 @@ function renderSummary() {
   ]
   if (targetKind === 'wsl') rows.push(addSummary(text('summary.distribution'), config.target.distribution))
   rows.push(addSummary(text('summary.folder'), config.installPath))
+  if (targetKind === 'native') rows.push(addSummary(text('summary.tools'), text(bridge.platform === 'win32' ? 'summary.toolsBundledWindows' : 'summary.toolsBundledNative')))
+  rows.push(addSummary(text('summary.registry'), text('summary.registryFallback')))
   rows.push(addSummary(text('summary.port'), config.port))
   rows.push(addSummary(text('summary.candidatePort'), config.candidatePort))
   rows.push(addSummary(text('summary.supervisorPort'), config.supervisorPort))

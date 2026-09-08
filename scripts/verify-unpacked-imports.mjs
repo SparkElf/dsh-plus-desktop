@@ -1,4 +1,5 @@
-import { cp, mkdtemp, readdir, rm, stat } from 'node:fs/promises'
+import { spawnSync } from 'node:child_process'
+import { cp, mkdtemp, readFile, readdir, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -17,6 +18,33 @@ async function main() {
     process.exitCode = 1
     return
   }
+  const resources = dirname(unpacked)
+  const closure = (await readdir(join(resources, 'plus-closure'))).filter(name => name.endsWith('.tgz'))
+  if (closure.length !== 27) throw new Error('packaged Plus closure contains ' + String(closure.length) + ' tarballs, expected 27')
+  const sourceManifest = JSON.parse(await readFile(join(resources, 'official-source', 'runtime.json'), 'utf8'))
+  const bundle = join(resources, 'official-source', 'official-source.bundle')
+  const gitCommand = process.platform === 'win32' ? join(resources, 'git-runtime', 'cmd', 'git.exe') : 'git'
+  const bundleResult = spawnSync(gitCommand, ['bundle', 'verify', bundle], { encoding: 'utf8', windowsHide: true })
+  if (bundleResult.status !== 0) throw new Error('packaged official source bundle is invalid: ' + bundleResult.stderr.trim())
+  if (sourceManifest.revision !== 'd347e703908d0406b7a7ef80e3a0e594d86b2215') throw new Error('packaged official source revision is ' + sourceManifest.revision)
+  const sourceProbe = await mkdtemp(join(tmpdir(), 'dsh-source-bundle-verify-'))
+  try {
+    const clone = spawnSync(gitCommand, ['clone', '--no-tags', bundle, join(sourceProbe, 'source')], { encoding: 'utf8', windowsHide: true })
+    if (clone.status !== 0) throw new Error('packaged official source clone failed: ' + clone.stderr.trim())
+    const head = spawnSync(gitCommand, ['rev-parse', 'HEAD'], { cwd: join(sourceProbe, 'source'), encoding: 'utf8', windowsHide: true })
+    if (head.status !== 0 || head.stdout.trim() !== sourceManifest.revision) throw new Error('packaged official source clone has the wrong revision')
+  } finally {
+    await rm(sourceProbe, { recursive: true, force: true })
+  }
+  const nodeName = process.platform === 'win32' ? 'node.exe' : 'node'
+  const nodeResult = spawnSync(join(resources, 'node-runtime', nodeName), ['-p', 'process.version'], { encoding: 'utf8', windowsHide: true })
+  if (nodeResult.status !== 0) throw new Error('packaged Node runtime failed: ' + nodeResult.stderr.trim())
+  if (process.platform === 'win32') {
+    const gitResult = spawnSync(join(resources, 'git-runtime', 'cmd', 'git.exe'), ['--version'], { encoding: 'utf8', windowsHide: true })
+    if (gitResult.status !== 0) throw new Error('packaged MinGit runtime failed: ' + gitResult.stderr.trim())
+    console.log('[verify-unpacked-imports] ' + gitResult.stdout.trim())
+  }
+  console.log('[verify-unpacked-imports] official source ' + sourceManifest.revision + '; closure 27; Node ' + nodeResult.stdout.trim())
   const yamlManifest = join(unpacked, 'node_modules', 'yaml', 'package.json')
   const pnpmManifest = join(unpacked, 'node_modules', 'pnpm', 'package.json')
   if (!await exists(yamlManifest) || !await exists(pnpmManifest)) {

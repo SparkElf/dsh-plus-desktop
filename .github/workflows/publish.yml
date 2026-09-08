@@ -44,8 +44,7 @@ jobs:
       - if: matrix.name == 'linux'
         run: xvfb-run -a pnpm exec playwright test --config=playwright.config.mjs --grep 'installer validates directory'
       - run: pnpm run ${{ matrix.script }}
-      - if: matrix.name == 'linux'
-        run: pnpm run verify:unpacked-imports
+      - run: pnpm run verify:unpacked-imports
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.name }}

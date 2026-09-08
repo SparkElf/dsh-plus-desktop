@@ -28,7 +28,7 @@ export function hiddenBuildSteps(installPath, pathJoin = join) {
 
 const COMMAND_TIMEOUT_MS = 15 * 60_000
 const CONNECT_TIMEOUT_MS = 30_000
-const proxyEnvironmentKeys = ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'NO_PROXY', 'http_proxy', 'https_proxy', 'all_proxy', 'no_proxy']
+const targetEnvironmentKeys = ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'NO_PROXY', 'http_proxy', 'https_proxy', 'all_proxy', 'no_proxy', 'pnpm_config_registry', 'DSH_HOME']
 const workspaceRequire = createRequire(import.meta.url)
 const bundledPnpmCli = join(dirname(workspaceRequire.resolve('pnpm')), 'bin', 'pnpm.mjs')
 
@@ -60,13 +60,15 @@ function execute(command, args, options = {}) {
     }
     child.stdout.on('data', capture)
     child.stderr.on('data', capture)
-    const timer = setTimeout(() => child.kill('SIGTERM'), options.timeoutMs ?? COMMAND_TIMEOUT_MS)
+    let timedOut = false
+    const timer = setTimeout(() => { timedOut = true; child.kill('SIGTERM') }, options.timeoutMs ?? COMMAND_TIMEOUT_MS)
     child.once('error', error => { clearTimeout(timer); reject(error) })
     child.once('exit', code => {
       clearTimeout(timer)
       const output = decodeProcessOutput(Buffer.concat(chunks))
       if (reportBuffer.trim()) options.report?.(reportBuffer.trim())
       if (code === 0) resolve(output)
+      else if (timedOut) reject(new Error(command + ' timed out' + (output ? ': ' + output : '')))
       else reject(new Error(output || command + ' failed with exit code ' + String(code)))
     })
     if (options.input !== undefined) child.stdin.end(options.input)
@@ -144,8 +146,8 @@ export class TargetRuntime {
     if (!this.isWsl) return { command, args, cwd }
     const wslArgs = ['--distribution', this.target.distribution]
     if (cwd !== undefined) wslArgs.push('--cd', cwd)
-    const proxyAssignments = proxyEnvironmentKeys.flatMap(key => environment?.[key] ? [key + '=' + environment[key]] : [])
-    wslArgs.push('--exec', ...(proxyAssignments.length > 0 ? ['env', ...proxyAssignments] : []), command, ...args)
+    const environmentAssignments = targetEnvironmentKeys.flatMap(key => environment?.[key] ? [key + '=' + environment[key]] : [])
+    wslArgs.push('--exec', ...(environmentAssignments.length > 0 ? ['env', ...environmentAssignments] : []), command, ...args)
     return { command: 'wsl.exe', args: wslArgs, cwd: undefined }
   }
 

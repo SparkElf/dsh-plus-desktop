@@ -1,6 +1,6 @@
 {
   "name": "@sparkelf/dsh-plus-desktop",
-  "version": "0.2.0-rc.3",
+  "version": "0.2.0-rc.4",
   "description": "Installable Electron desktop for DeepSeek Harness Plus 0.1.0-rc.22",
   "type": "module",
   "main": "./runtime/main.mjs",
@@ -28,8 +28,10 @@
     "verify:unpacked-imports": "node scripts/verify-unpacked-imports.mjs",
     "package": "pnpm run prepare:runtime && electron-builder --publish never",
     "prepare:closure": "node scripts/prepare-closure.mjs",
-    "prepare:runtime": "pnpm run prepare:closure && node scripts/prepare-node-runtime.mjs",
-    "test:install": "pnpm run prepare:runtime && playwright test --config=playwright.config.mjs --grep \"installer completes a native Harness installation\""
+    "prepare:runtime": "pnpm run prepare:closure && node scripts/prepare-node-runtime.mjs && pnpm run prepare:source && pnpm run prepare:git",
+    "test:install": "pnpm run prepare:runtime && playwright test --config=playwright.config.mjs --grep \"installer completes a native Harness installation\"",
+    "prepare:git": "node scripts/prepare-git-runtime.mjs",
+    "prepare:source": "node scripts/prepare-source-bundle.mjs"
   },
   "engines": {
     "node": "^22.19.0 || >=24.0.0"
@@ -127,6 +129,22 @@
           "node.exe",
           "LICENSE",
           "runtime.json"
+        ]
+      },
+      {
+        "from": "vendor/official-source",
+        "to": "official-source",
+        "filter": [
+          "official-source.bundle",
+          "runtime.json"
+        ]
+      },
+      {
+        "from": "vendor/git",
+        "to": "git-runtime",
+        "filter": [
+          "**/*",
+          "!.mingit.zip"
         ]
       }
     ]
