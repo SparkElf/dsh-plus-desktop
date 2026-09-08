@@ -30,7 +30,6 @@ test('installer validates directory provider proxy and retry controls', async ({
       ...process.env,
       DSH_PLUS_INSTALL_REPOSITORY: testInfo.outputPath('missing-repository'),
       DSH_PLUS_INSTALL_SOURCE_REF: 'HEAD',
-      DSH_PLUS_INSTALL_SOURCE_BUNDLE: testInfo.outputPath('missing-source.bundle'),
     },
   })
   try {
@@ -101,10 +100,12 @@ test('installer validates directory provider proxy and retry controls', async ({
     await expect(page.locator('#summary')).toContainText('3182')
     await expect(page.locator('#summary')).toContainText('3183')
     await expect(page.locator('#summary')).toContainText('覆盖安装，保留用户数据')
-    await expect(page.locator('#summary')).toContainText(process.platform === 'win32' ? '已内置 Git、Node.js 和 pnpm' : '已内置 Node.js 和 pnpm')
-    await expect(page.locator('#summary')).toContainText('自动切换国内镜像')
+    await expect(page.locator('#summary')).toContainText(process.platform === 'win32' ? '安装或复用系统 Git、Node.js、npm 和 pnpm' : '使用系统 Node.js、npm 和 pnpm')
+    await expect(page.locator('#summary')).toContainText('自动选择可用源（含国内镜像）')
 
     await page.getByRole('button', { name: '安装', exact: true }).click()
+    await expect(page.locator('#progressText')).toHaveText('下载暂时失败，正在自动重试…', { timeout: 30_000 })
+    await expect(page.locator('#progressDetail')).toContainText('Will retry in')
     await expect(page.locator('#retryInstall')).toBeVisible({ timeout: 60_000 })
     await expect(page.locator('#error')).toContainText('请检查网络或下载代理后重试。')
     await page.locator('#retryInstall').click()
@@ -117,7 +118,8 @@ test('installer validates directory provider proxy and retry controls', async ({
 })
 
 test('installer completes a native Harness installation and starts Supervisor', async ({}, testInfo) => {
-  test.setTimeout(45 * 60_000)
+  const installTimeout = (process.platform === 'win32' ? 73 : 43) * 60_000
+  test.setTimeout((process.platform === 'win32' ? 75 : 45) * 60_000)
   const installPath = testInfo.outputPath('installed-harness')
   const userData = testInfo.outputPath('user-data')
   const port = 47_000 + (process.pid % 1_000) * 4
@@ -148,17 +150,21 @@ test('installer completes a native Harness installation and starts Supervisor', 
     await page.getByRole('button', { name: '继续' }).click()
     await expect(page.getByRole('heading', { name: '确认安装' })).toBeVisible()
     await expect(page.locator('#summary')).toContainText(String(supervisorPort))
-    await expect(page.locator('#summary')).toContainText(process.platform === 'win32' ? '已内置 Git、Node.js 和 pnpm' : '已内置 Node.js 和 pnpm')
-    await expect(page.locator('#summary')).toContainText('自动切换国内镜像')
+    await expect(page.locator('#summary')).toContainText(process.platform === 'win32' ? '安装或复用系统 Git、Node.js、npm 和 pnpm' : '使用系统 Node.js、npm 和 pnpm')
+    await expect(page.locator('#summary')).toContainText('自动选择可用源（含国内镜像）')
 
     const installerFinished = Promise.race([
-      page.waitForEvent('close', { timeout: 43 * 60_000 }).then(() => ({ closed: true })).catch(() => undefined),
-      page.locator('#error').waitFor({ state: 'visible', timeout: 43 * 60_000 }).then(async () => ({ closed: false, error: await page.locator('#error').textContent() })).catch(() => undefined),
+      page.waitForEvent('close', { timeout: installTimeout }).then(() => ({ closed: true })).catch(() => undefined),
+      page.locator('#error').waitFor({ state: 'visible', timeout: installTimeout }).then(async () => ({ closed: false, error: await page.locator('#error').textContent() })).catch(() => undefined),
     ])
     await page.getByRole('button', { name: '安装', exact: true }).click()
     await expect(page.locator('#progressDetail')).toHaveText('https://registry.npmmirror.com', { timeout: 120_000 })
     const result = await installerFinished
-    if (result?.closed !== true) throw new Error('Native installation failed: ' + String(result?.error ?? 'installer did not complete'))
+    if (result?.closed !== true) {
+      const progress = await page.locator('#progressText').textContent().catch(() => '')
+      const detail = await page.locator('#progressDetail').textContent().catch(() => '')
+      throw new Error('Native installation failed: ' + String(result?.error ?? 'installer did not complete') + '; progress=' + progress + '; detail=' + detail)
+    }
     expect(application.process().exitCode).toBeNull()
     expect(existsSync(join(installPath, 'apps', 'cli', 'lib', 'bin.js'))).toBe(true)
     const profile = JSON.parse(readFileSync(join(installPath, '.dsh-plus', 'home', 'profiles', 'plus', 'package.json'), 'utf8'))
