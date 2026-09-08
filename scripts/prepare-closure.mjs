@@ -13,11 +13,17 @@ async function prepare(entry) {
   let current
   try { current = createHash('sha256').update(await readFile(target)).digest('hex') } catch { current = undefined }
   if (current === entry.sha256) return
-  const urls = entry.url.startsWith('https://registry.npmjs.org/')
+  const npmPackage = entry.url.startsWith('https://registry.npmjs.org/')
+  const urls = npmPackage
     ? [entry.url, entry.url.replace('https://registry.npmjs.org/', 'https://registry.npmmirror.com/')]
-    : [entry.url]
+    : [entry.url, entry.url, entry.url]
   let failure
-  for (const url of urls) {
+  for (const [attempt, url] of urls.entries()) {
+    if (!npmPackage && attempt > 0) {
+      const delay = attempt === 1 ? 5_000 : 20_000
+      console.log('Retrying ' + entry.file + ' in ' + String(delay / 1_000) + ' seconds')
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
     const controller = new AbortController()
     let timer = setTimeout(() => controller.abort(), 60_000)
     let bytes

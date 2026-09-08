@@ -39,7 +39,7 @@ if (process.platform !== 'win32') {
     manifest.scripts.install = 'node -e ""'
     await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + String.fromCharCode(10))
     run(process.execPath, ['-e', 'require(process.argv[1])', staged], working, environment)
-    run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['pack', '--pack-destination', destination], staged, environment)
+    run(process.execPath, [process.env.npm_execpath, 'pack', '--pack-destination', destination], staged, environment)
     const source = join(destination, 'fs-ext-2.1.1.tgz')
     const file = 'fs-ext-2.1.1-win32-x64-node' + process.versions.modules + '.tgz'
     await rename(source, join(destination, file))
