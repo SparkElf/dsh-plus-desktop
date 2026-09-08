@@ -30,7 +30,6 @@ test('installer validates directory provider proxy and retry controls', async ({
       ...process.env,
       DSH_PLUS_INSTALL_REPOSITORY: testInfo.outputPath('missing-repository'),
       DSH_PLUS_INSTALL_SOURCE_REF: 'HEAD',
-      DSH_PLUS_INSTALL_SOURCE_BUNDLE: testInfo.outputPath('missing-source.bundle'),
     },
   })
   try {
@@ -101,7 +100,7 @@ test('installer validates directory provider proxy and retry controls', async ({
     await expect(page.locator('#summary')).toContainText('3182')
     await expect(page.locator('#summary')).toContainText('3183')
     await expect(page.locator('#summary')).toContainText('覆盖安装，保留用户数据')
-    await expect(page.locator('#summary')).toContainText(process.platform === 'win32' ? '已内置 Git、Node.js、npm 和 pnpm' : '使用系统 Node.js、npm 和 pnpm')
+    await expect(page.locator('#summary')).toContainText(process.platform === 'win32' ? '安装或复用系统 Git、Node.js、npm 和 pnpm' : '使用系统 Node.js、npm 和 pnpm')
     await expect(page.locator('#summary')).toContainText('自动选择可用源（含国内镜像）')
 
     await page.getByRole('button', { name: '安装', exact: true }).click()
@@ -151,7 +150,7 @@ test('installer completes a native Harness installation and starts Supervisor', 
     await page.getByRole('button', { name: '继续' }).click()
     await expect(page.getByRole('heading', { name: '确认安装' })).toBeVisible()
     await expect(page.locator('#summary')).toContainText(String(supervisorPort))
-    await expect(page.locator('#summary')).toContainText(process.platform === 'win32' ? '已内置 Git、Node.js、npm 和 pnpm' : '使用系统 Node.js、npm 和 pnpm')
+    await expect(page.locator('#summary')).toContainText(process.platform === 'win32' ? '安装或复用系统 Git、Node.js、npm 和 pnpm' : '使用系统 Node.js、npm 和 pnpm')
     await expect(page.locator('#summary')).toContainText('自动选择可用源（含国内镜像）')
 
     const installerFinished = Promise.race([

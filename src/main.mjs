@@ -14,6 +14,7 @@ import { HarnessDaemon } from './daemon.mjs'
 import { listWslDistributions, TargetRuntime } from './target-runtime.mjs'
 import { materializationCommands, OFFICIAL_REPOSITORY, OFFICIAL_SOURCE_REVISION, PLUS_DISTRIBUTION } from './release-target.mjs'
 import { BACKUP_MANIFEST_ENTRY, exportUserBackup, restoreUserBackup, validateUserBackup } from './backup.mjs'
+import { ensureWindowsToolchain } from './windows-toolchain.mjs'
 
 const repository = process.env.DSH_PLUS_INSTALL_REPOSITORY ?? OFFICIAL_REPOSITORY
 const installSourceRef = process.env.DSH_PLUS_INSTALL_SOURCE_REF ?? OFFICIAL_SOURCE_REVISION
@@ -22,12 +23,6 @@ const currentDirectory = dirname(fileURLToPath(import.meta.url))
 const supervisorDirectory = currentDirectory.replace(/\.asar([\\/])/u, '.asar.unpacked$1')
 const bundledPnpmCli = join(dirname(createRequire(import.meta.url).resolve('pnpm')), 'bin', 'pnpm.mjs')
 const closureDirectory = process.env.DSH_PLUS_INSTALL_CLOSURE ?? (app.isPackaged ? join(process.resourcesPath, 'plus-closure') : join(currentDirectory, '..', 'vendor', 'plus-rc22'))
-const nodeRuntimeDirectory = process.env.DSH_PLUS_INSTALL_NODE_DIRECTORY ?? (app.isPackaged ? join(process.resourcesPath, 'node-runtime') : join(currentDirectory, '..', 'vendor', 'node'))
-const embeddedNodePath = join(nodeRuntimeDirectory, process.platform === 'win32' ? 'node.exe' : 'node')
-const gitRuntimeDirectory = process.env.DSH_PLUS_INSTALL_GIT_DIRECTORY ?? (app.isPackaged ? join(process.resourcesPath, 'git-runtime') : join(currentDirectory, '..', 'vendor', 'git'))
-const embeddedGitPath = join(gitRuntimeDirectory, 'cmd', 'git.exe')
-const sourceBundleDirectory = process.env.DSH_PLUS_INSTALL_SOURCE_DIRECTORY ?? (app.isPackaged ? join(process.resourcesPath, 'official-source') : join(currentDirectory, '..', 'vendor', 'official-source'))
-const sourceBundlePath = process.env.DSH_PLUS_INSTALL_SOURCE_BUNDLE ?? join(sourceBundleDirectory, 'official-source.bundle')
 const windowsNativeDirectory = process.env.DSH_PLUS_INSTALL_WINDOWS_NATIVE_DIRECTORY ?? (app.isPackaged ? join(process.resourcesPath, 'windows-native') : join(currentDirectory, '..', 'vendor', 'windows-native'))
 const officialNpmRegistry = 'https://registry.npmjs.org'
 const configuredPrimaryNpmRegistry = process.env.DSH_PLUS_INSTALL_PRIMARY_REGISTRY
@@ -150,14 +145,14 @@ function proxyEnvironment(proxy) {
 }
 
 function gitCommandFor(targetRuntime) {
-  return !targetRuntime.isWsl && process.platform === 'win32' ? embeddedGitPath : 'git'
+  return targetRuntime.toolchain?.git ?? 'git'
 }
 
 function toolEnvironment(targetRuntime, environment) {
-  if (targetRuntime.isWsl || process.platform !== 'win32') return environment
+  if (targetRuntime.isWsl || process.platform !== 'win32' || targetRuntime.toolchain === undefined) return environment
   const pathKey = Object.keys(process.env).find(key => key.toLowerCase() === 'path') ?? 'Path'
   const current = environment?.[pathKey] ?? process.env[pathKey] ?? ''
-  return { ...(environment ?? {}), [pathKey]: [nodeRuntimeDirectory, join(gitRuntimeDirectory, 'cmd'), current].filter(Boolean).join(';') }
+  return { ...(environment ?? {}), [pathKey]: [dirname(targetRuntime.toolchain.node), dirname(targetRuntime.toolchain.git), targetRuntime.toolchain.pnpmBin, current].filter(Boolean).join(';') }
 }
 
 function registryEnvironment(environment, registry) {
@@ -196,24 +191,20 @@ class RegistrySession {
   }
 }
 
-function runtimeFor(form, port) {
-  const targetRuntime = new TargetRuntime(form.target)
+function runtimeFor(form, port, toolchain) {
+  const targetRuntime = new TargetRuntime(form.target, toolchain)
   const dshHome = targetRuntime.join(form.installPath, '.dsh-plus', 'home')
   const supervisorDirectory = targetRuntime.join(dshHome, 'supervisor')
   const socketPath = targetRuntime.isWsl ? targetRuntime.join(supervisorDirectory, 'runtime-supervisor.sock') : nativeSupervisorSocketPath(Number(form.supervisorPort))
-  const nodeCommand = targetRuntime.isWsl ? 'node' : embeddedNodePath
+  const nodeCommand = targetRuntime.isWsl ? 'node' : toolchain?.node ?? 'node'
   return {
-    version: 6,
+    version: 7,
     target: form.target,
     installPath: form.installPath,
     proxy: form.proxy || undefined,
     sourceRef: installSourceRef,
     distribution: plusDistribution,
-    toolchain: targetRuntime.isWsl
-      ? { mode: 'system', git: 'git', node: 'node', npm: 'npm', pnpm: 'corepack pnpm' }
-      : process.platform === 'win32'
-        ? { mode: 'bundled', git: embeddedGitPath, node: embeddedNodePath, npm: join(nodeRuntimeDirectory, 'npm.cmd'), pnpm: join(nodeRuntimeDirectory, 'pnpm.cmd') }
-        : { mode: 'system', git: 'git', node: process.execPath, npm: 'npm', pnpm: 'pnpm' },
+    toolchain: targetRuntime.isWsl ? { mode: 'system', git: 'git', node: 'node', npm: 'npm', pnpm: 'corepack pnpm' } : toolchain,
     dshHome,
     port,
     candidatePort: Number(form.candidatePort),
@@ -230,7 +221,7 @@ function runtimeFor(form, port) {
     },
     build: {
       command: targetRuntime.isWsl ? 'corepack' : nodeCommand,
-      args: targetRuntime.isWsl ? ['pnpm', 'run', 'build:official'] : [bundledPnpmCli, 'run', 'build:official'],
+      args: targetRuntime.isWsl ? ['pnpm', 'run', 'build:official'] : [toolchain?.pnpm ?? bundledPnpmCli, 'run', 'build:official'],
       cwd: form.installPath,
     },
     locale: form.locale,
@@ -437,20 +428,6 @@ function cloneProgressReporter(report, message) {
 }
 
 class RetryableInstallError extends Error {}
-
-async function cloneBundledSource(targetRuntime, form, networkEnvironment, installText) {
-  const git = gitCommandFor(targetRuntime)
-  try {
-    await targetRuntime.run(git, ['clone', '--no-tags', sourceBundlePath, form.installPath], undefined, undefined, { env: networkEnvironment })
-    const head = (await targetRuntime.run(git, ['rev-parse', 'HEAD'], form.installPath)).trim()
-    if (head !== installSourceRef) throw new Error('Bundled official source resolved to ' + head + ', expected ' + installSourceRef)
-    await targetRuntime.run(git, ['remote', 'set-url', 'origin', repository], form.installPath)
-  } catch (error) {
-    console.error('[plus-desktop] bundled official source clone failed', error)
-    await targetRuntime.resetInstallDirectory(form.installPath)
-    throw new RetryableInstallError((error instanceof Error ? error.message : String(error)) + installText.retryHint)
-  }
-}
 
 async function cloneRemoteWithRetry(targetRuntime, form, networkEnvironment, report, installText) {
   const git = gitCommandFor(targetRuntime)
@@ -666,8 +643,7 @@ async function startRuntimeWithTakeover() {
 async function prepareWindowsNativeOverride(targetRuntime, installPath) {
   if (process.platform !== 'win32' || targetRuntime.isWsl) return undefined
   const native = JSON.parse(await readFile(join(windowsNativeDirectory, 'runtime.json'), 'utf8'))
-  const node = JSON.parse(await readFile(join(nodeRuntimeDirectory, 'runtime.json'), 'utf8'))
-  if (native.modules !== node.modules) throw new Error('Prebuilt fs-ext ABI ' + native.modules + ' does not match bundled Node ABI ' + node.modules)
+  if (native.modules !== targetRuntime.toolchain?.modules) throw new Error('Prebuilt fs-ext ABI ' + native.modules + ' does not match selected Node ABI ' + targetRuntime.toolchain?.modules)
   const packageDirectory = targetRuntime.join(installPath, '.dsh-plus', 'packages')
   await targetRuntime.makeDirectory(packageDirectory)
   const archive = targetRuntime.join(packageDirectory, native.file)
@@ -735,12 +711,12 @@ async function materializePlus(targetRuntime, configured, registrySession, repor
 function installMessages(locale) {
   return locale === 'zh'
     ? {
-        preparing: '正在准备安装…', checking: '正在检查安装环境…', source: '正在准备内置 Harness 源码…', downloading: '正在下载 Harness…',
+        preparing: '正在准备安装…', checking: '正在检查安装环境…', downloading: '正在下载 Harness…',
         configuring: '正在写入设置…', overwriting: '正在更新已有 Harness…', installing: '正在安装依赖…', building: '正在构建 Harness…',
         starting: '正在启动 Harness…', retrying: '下载失败，正在重试…', retryingRegistry: '下载暂时失败，正在自动重试…', switchingRegistry: '当前下载源不可用，正在切换备用源…', retryHint: ' 请检查网络或下载代理后重试。', complete: '安装完成。',
       }
     : {
-        preparing: 'Preparing installation…', checking: 'Checking the installation environment…', source: 'Preparing the bundled Harness source…', downloading: 'Downloading Harness…',
+        preparing: 'Preparing installation…', checking: 'Checking the installation environment…', downloading: 'Downloading Harness…',
         configuring: 'Writing settings…', overwriting: 'Updating existing Harness…', installing: 'Installing dependencies…', building: 'Building Harness…',
         starting: 'Starting Harness…', retrying: 'Download failed, retrying…', retryingRegistry: 'The download was interrupted; retrying automatically…', switchingRegistry: 'The current npm source is unavailable; switching to the alternate source…', retryHint: ' Check the network or download proxy and retry.', complete: 'Installation complete.',
       }
@@ -751,10 +727,8 @@ async function install(form) {
   // 覆盖安装允许重装：勾选覆盖时先限时停掉旧 runtime，再走安装流程。
   if (runtime !== undefined && !form.overwrite) throw new Error('DeepSeek Harness Plus is already installed.')
   const port = await validateInstall(form)
-  const targetRuntime = new TargetRuntime(form.target)
+  let targetRuntime = new TargetRuntime(form.target)
   await assertLocalPortsAvailable(form, [port, Number(form.candidatePort), Number(form.supervisorPort), Number(form.candidateSupervisorPort)])
-  const networkEnvironment = toolEnvironment(targetRuntime, proxyEnvironment(form.proxy))
-  const configured = runtimeFor(form, port)
   busy = 'Installing DeepSeek Harness Plus...'
   refreshTray()
   try {
@@ -765,6 +739,10 @@ async function install(form) {
       refreshTray()
     }
     const installText = installMessages(form.locale)
+    const toolchain = process.platform === 'win32' && form.target.kind === 'native' ? await ensureWindowsToolchain(form, report) : undefined
+    targetRuntime = new TargetRuntime(form.target, toolchain)
+    const networkEnvironment = toolEnvironment(targetRuntime, proxyEnvironment(form.proxy))
+    const configured = runtimeFor(form, port, toolchain)
     const registrySession = new RegistrySession(networkEnvironment, form.locale, registry => { registryDetail = registry; report(48, installText.switchingRegistry) })
     registryDetail = registrySession.registry
     report(2, installText.preparing)
@@ -780,10 +758,9 @@ async function install(form) {
     const targetState = await targetRuntime.installationDirectoryState(form.installPath)
     const overwriteExisting = targetState === 'harness' && form.overwrite
     if (targetState === 'empty') {
-      report(14, targetRuntime.isWsl ? installText.downloading : installText.source)
+      report(14, installText.downloading)
       await targetRuntime.assertEmptyDirectory(form.installPath)
-      if (targetRuntime.isWsl) await cloneRemoteWithRetry(targetRuntime, form, networkEnvironment, report, installText)
-      else await cloneBundledSource(targetRuntime, form, networkEnvironment, installText)
+      await cloneRemoteWithRetry(targetRuntime, form, networkEnvironment, report, installText)
     } else if (targetState === 'harness' && form.overwrite) {
       await updateExistingWithRetry(targetRuntime, form, networkEnvironment, report, installText)
     } else if (targetState === 'harness') {
@@ -836,12 +813,12 @@ async function install(form) {
 
 async function assertInstalled() {
   if (runtime === undefined) throw new Error('Install DeepSeek Harness Plus before using this action.')
-  await new TargetRuntime(runtime.target).assertDirectory(runtime.installPath)
+  await new TargetRuntime(runtime.target, runtime.toolchain).assertDirectory(runtime.installPath)
 }
 
 async function applyUpgrade(sourceRef) {
   await assertInstalled()
-  const targetRuntime = new TargetRuntime(runtime.target)
+  const targetRuntime = new TargetRuntime(runtime.target, runtime.toolchain)
   const networkEnvironment = toolEnvironment(targetRuntime, proxyEnvironment(runtime.proxy))
   const restart = (await daemon.snapshot()).state === 'running'
   const report = message => { busy = message; updatesWindow?.webContents.send('updates:progress', { message }); refreshTray() }
@@ -870,7 +847,7 @@ async function upgrade(sourceRef = installSourceRef) {
 async function repair() {
   await action(trayText('repair'), async () => {
     await assertInstalled()
-    const targetRuntime = new TargetRuntime(runtime.target)
+    const targetRuntime = new TargetRuntime(runtime.target, runtime.toolchain)
     const networkEnvironment = toolEnvironment(targetRuntime, proxyEnvironment(runtime.proxy))
     const restart = (await daemon.snapshot()).state === 'running'
     const report = message => { busy = message; refreshTray() }
@@ -890,7 +867,7 @@ async function repair() {
 
 async function releaseVersions() {
   await assertInstalled()
-  const targetRuntime = new TargetRuntime(runtime.target)
+  const targetRuntime = new TargetRuntime(runtime.target, runtime.toolchain)
   const networkEnvironment = proxyEnvironment(runtime.proxy)
   const git = gitCommandFor(targetRuntime)
   const [remoteTags, currentRef] = await Promise.all([
@@ -984,7 +961,7 @@ function openBackupWindow() {
 
 /** 返回主进程可直接读写的 dshHome 路径：native 路径原样使用，WSL 转换为 UNC 路径。 */
 function backupDataPath() {
-  return new TargetRuntime(runtime.target).uncPath(runtime.dshHome)
+  return new TargetRuntime(runtime.target, runtime.toolchain).uncPath(runtime.dshHome)
 }
 
 async function handleBackupState() {
@@ -1068,7 +1045,7 @@ async function openSupervisor() {
 
 async function openDataFolder() {
   await assertInstalled()
-  const targetRuntime = new TargetRuntime(runtime.target)
+  const targetRuntime = new TargetRuntime(runtime.target, runtime.toolchain)
   await targetRuntime.openPath(shell, targetRuntime.join(runtime.installPath, '.dsh-plus'))
 }
 
@@ -1080,7 +1057,7 @@ function launchNativeSupervisor(scriptPath, args, config, environment) {
   }
   const child = utilityProcess.fork(scriptPath, args, {
     cwd: config.installPath,
-    env: { ...process.env, ...toolEnvironment(new TargetRuntime({ kind: 'native' }), environment) },
+    env: { ...process.env, ...toolEnvironment(new TargetRuntime({ kind: 'native' }, config.toolchain), environment) },
     stdio: 'pipe',
     serviceName: 'DeepSeek Harness Plus Supervisor',
   })
@@ -1101,7 +1078,12 @@ const daemon = new HarnessDaemon(status => {
 
 /** 将历史本机配置提升为当前的显式 target、实例和 Supervisor 端口配置。 */
 async function migrateRuntime(saved) {
-  if (saved.version === 6) return saved
+  if (saved.version === 7) return saved
+  if (process.platform === 'win32' && (saved.target?.kind ?? 'native') === 'native' && saved.toolchain?.mode !== 'system') {
+    const error = new Error('Windows system toolchain selection is required')
+    error.code = 'ETOOLCHAIN_SETUP'
+    throw error
+  }
   const settings = parseYaml(await readFile(join(saved.dshHome, 'settings.yaml'), 'utf8'))
   return runtimeFor({
     target: saved.target ?? { kind: 'native' },
@@ -1120,7 +1102,7 @@ async function loadRuntime() {
     const configured = await migrateRuntime(JSON.parse(await readFile(setupPath(), 'utf8')))
     await saveRuntime(configured)
   } catch (error) {
-    if (error?.code === 'ENOENT') {
+    if (error?.code === 'ENOENT' || error?.code === 'ETOOLCHAIN_SETUP') {
       runtime = undefined
       return
     }
@@ -1217,7 +1199,7 @@ ipcMain.handle('installer:default-install-path', () => {
 ipcMain.handle('installer:reconfigure-state', async () => {
   // 重配置时把既有 runtime 的连接信息回填进向导，避免用户重复填写。
   if (runtime === undefined) return null
-  const targetRuntime = new TargetRuntime(runtime.target)
+  const targetRuntime = new TargetRuntime(runtime.target, runtime.toolchain)
   let hasCredentials = false
   try {
     hasCredentials = await targetRuntime.fileExists(targetRuntime.join(runtime.dshHome, '.credentials.yaml'))

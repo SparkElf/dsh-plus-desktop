@@ -28,10 +28,8 @@
     "verify:unpacked-imports": "node scripts/verify-unpacked-imports.mjs",
     "package": "pnpm run prepare:runtime && electron-builder --publish never",
     "prepare:closure": "node scripts/prepare-closure.mjs",
-    "prepare:runtime": "pnpm run prepare:closure && node scripts/prepare-node-runtime.mjs && pnpm run prepare:source && pnpm run prepare:git && pnpm run prepare:windows-native",
+    "prepare:runtime": "pnpm run prepare:closure && pnpm run prepare:windows-native",
     "test:install": "pnpm run prepare:runtime && playwright test --config=playwright.config.mjs --grep \"installer completes a native Harness installation\"",
-    "prepare:git": "node scripts/prepare-git-runtime.mjs",
-    "prepare:source": "node scripts/prepare-source-bundle.mjs",
     "prepare:windows-native": "node scripts/prepare-windows-native.mjs"
   },
   "engines": {
@@ -121,37 +119,6 @@
         "filter": [
           "*.tgz",
           "plus-closure.json"
-        ]
-      },
-      {
-        "from": "vendor/node",
-        "to": "node-runtime",
-        "filter": [
-          "node",
-          "node.exe",
-          "npm.cmd",
-          "npx.cmd",
-          "pnpm.cmd",
-          "node_modules/npm/**/*",
-          "node_modules/pnpm/**/*",
-          "LICENSE",
-          "runtime.json"
-        ]
-      },
-      {
-        "from": "vendor/official-source",
-        "to": "official-source",
-        "filter": [
-          "official-source.bundle",
-          "runtime.json"
-        ]
-      },
-      {
-        "from": "vendor/git",
-        "to": "git-runtime",
-        "filter": [
-          "**/*",
-          "!.mingit.zip"
         ]
       },
       {

@@ -134,8 +134,9 @@ export async function listWslDistributions() {
  * 上层只传目标语义，避免安装、升级、修复和托盘分别判断运行环境。
  */
 export class TargetRuntime {
-  constructor(target) {
+  constructor(target, toolchain) {
     this.target = target
+    this.toolchain = toolchain
   }
 
   get isWsl() { return this.target.kind === 'wsl' }
@@ -157,9 +158,10 @@ export class TargetRuntime {
     return execute(invocation.command, invocation.args, { ...options, cwd: invocation.cwd, report })
   }
 
-  /** 用 installer 自带的 pnpm 运行 native target；WSL 在发行版内用 Corepack 解析固定包管理器。 */
+  /** native target优先使用已解析的系统Node/pnpm；非Windows开发目标保留installer入口。 */
   runPnpm(args, cwd, report, options = {}) {
     if (this.isWsl) return this.run('corepack', ['pnpm', ...args], cwd, report, options)
+    if (this.toolchain !== undefined) return execute(this.toolchain.node, [this.toolchain.pnpm, ...args], { ...options, cwd, report, env: { ...process.env, ...options.env } })
     return execute(process.execPath, [bundledPnpmCli, ...args], {
       ...options,
       cwd,
