@@ -17,7 +17,7 @@ Desktop 0.2.0-rc.5是`@sparkelf/dsh-plus@0.1.0-rc.22`对应的可安装桌面端
 
 首次启动向导会选择安装目录、端口、代理、模型提供方和API凭据。它从内嵌Git bundle克隆official DeepSeek Harness revision `d347e703908d0406b7a7ef80e3a0e594d86b2215`，安装精确Plus distribution，应用source patches，执行official build，写入隔离DSH home，并启动外部Supervisor。既有用户settings与data保留在所选安装目录的`.dsh-plus/home`中。
 
-Windows安装器内含Electron、带许可证的独立Node runtime、pnpm、MinGit 2.55.0.5、精确official source Git bundle，以及Plus rc.22闭包中的27个已审阅tarball。计算机无需预装Git或Node.js。中文安装优先使用`https://registry.npmmirror.com`，失败后切换npm官方源；英文安装顺序相反。命令失败时，`error (23)`等registry下载警告也会触发备用源。安装向导支持HTTP、HTTPS和SOCKS5代理地址。Windows native依赖由CI针对内嵌Node ABI预编译；用户不需要Python、node-gyp、Visual Studio Build Tools或Windows SDK。
+Windows安装器内含Electron、带许可证的Node.js/npm runtime、pnpm、MinGit 2.55.0.5、精确official source Git bundle，以及Plus rc.22闭包中的27个已审阅tarball。计算机无需预装Git或Node.js。中文安装优先使用`https://registry.npmmirror.com`，失败后切换npm官方源；英文安装顺序相反。命令失败时，`error (23)`等registry下载警告也会触发备用源。安装向导支持HTTP、HTTPS和SOCKS5代理地址。Windows native依赖由CI针对内嵌Node ABI预编译；用户不需要Python、node-gyp、Visual Studio Build Tools或Windows SDK。
 
 ## 版本绑定
 

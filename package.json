@@ -129,6 +129,11 @@
         "filter": [
           "node",
           "node.exe",
+          "npm.cmd",
+          "npx.cmd",
+          "pnpm.cmd",
+          "node_modules/npm/**/*",
+          "node_modules/pnpm/**/*",
           "LICENSE",
           "runtime.json"
         ]

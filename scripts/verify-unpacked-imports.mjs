@@ -41,10 +41,18 @@ async function main() {
   const nodeResult = spawnSync(join(resources, 'node-runtime', nodeName), ['-p', 'process.version'], { encoding: 'utf8', windowsHide: true })
   if (nodeResult.status !== 0) throw new Error('packaged Node runtime failed: ' + nodeResult.stderr.trim())
   if (process.platform === 'win32') {
+    const pathKey = Object.keys(process.env).find(key => key.toLowerCase() === 'path') ?? 'Path'
+    const environment = { ...process.env, [pathKey]: [join(resources, 'node-runtime'), join(resources, 'git-runtime', 'cmd'), process.env[pathKey] ?? ''].join(';') }
+    const discover = spawnSync('where.exe', ['git', 'node', 'npm', 'pnpm'], { env: environment, encoding: 'utf8', windowsHide: true })
+    if (discover.status !== 0) throw new Error('packaged toolchain is not discoverable from PATH: ' + discover.stderr.trim())
     const gitResult = spawnSync(join(resources, 'git-runtime', 'cmd', 'git.exe'), ['--version'], { encoding: 'utf8', windowsHide: true })
     if (gitResult.status !== 0) throw new Error('packaged MinGit runtime failed: ' + gitResult.stderr.trim())
     const native = JSON.parse(await readFile(join(resources, 'windows-native', 'runtime.json'), 'utf8'))
     const node = JSON.parse(await readFile(join(resources, 'node-runtime', 'runtime.json'), 'utf8'))
+    const npmResult = spawnSync(join(resources, 'node-runtime', nodeName), [join(resources, 'node-runtime', 'node_modules', 'npm', 'bin', 'npm-cli.js'), '--version'], { encoding: 'utf8', windowsHide: true })
+    if (npmResult.status !== 0) throw new Error('packaged npm failed: ' + npmResult.stderr.trim())
+    const pnpmResult = spawnSync(join(resources, 'node-runtime', nodeName), [join(resources, 'node-runtime', 'node_modules', 'pnpm', 'bin', 'pnpm.mjs'), '--version'], { encoding: 'utf8', windowsHide: true })
+    if (pnpmResult.status !== 0) throw new Error('packaged pnpm failed: ' + pnpmResult.stderr.trim())
     if (native.modules !== node.modules) throw new Error('packaged fs-ext ABI does not match packaged Node')
     const archive = join(resources, 'windows-native', native.file)
     const digest = createHash('sha256').update(await readFile(archive)).digest('hex')
@@ -60,7 +68,7 @@ async function main() {
     } finally {
       await rm(nativeProbe, { recursive: true, force: true })
     }
-    console.log('[verify-unpacked-imports] ' + gitResult.stdout.trim() + '; fs-ext ABI ' + native.modules)
+    console.log('[verify-unpacked-imports] ' + gitResult.stdout.trim() + '; npm ' + npmResult.stdout.trim() + '; pnpm ' + pnpmResult.stdout.trim() + '; fs-ext ABI ' + native.modules)
   }
   console.log('[verify-unpacked-imports] official source ' + sourceManifest.revision + '; closure 27; Node ' + nodeResult.stdout.trim())
   const yamlManifest = join(unpacked, 'node_modules', 'yaml', 'package.json')

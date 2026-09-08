@@ -153,6 +153,13 @@ function gitCommandFor(targetRuntime) {
   return !targetRuntime.isWsl && process.platform === 'win32' ? embeddedGitPath : 'git'
 }
 
+function toolEnvironment(targetRuntime, environment) {
+  if (targetRuntime.isWsl || process.platform !== 'win32') return environment
+  const pathKey = Object.keys(process.env).find(key => key.toLowerCase() === 'path') ?? 'Path'
+  const current = environment?.[pathKey] ?? process.env[pathKey] ?? ''
+  return { ...(environment ?? {}), [pathKey]: [nodeRuntimeDirectory, join(gitRuntimeDirectory, 'cmd'), current].filter(Boolean).join(';') }
+}
+
 function registryEnvironment(environment, registry) {
   return { ...(environment ?? {}), pnpm_config_registry: registry }
 }
@@ -196,12 +203,17 @@ function runtimeFor(form, port) {
   const socketPath = targetRuntime.isWsl ? targetRuntime.join(supervisorDirectory, 'runtime-supervisor.sock') : nativeSupervisorSocketPath(Number(form.supervisorPort))
   const nodeCommand = targetRuntime.isWsl ? 'node' : embeddedNodePath
   return {
-    version: 5,
+    version: 6,
     target: form.target,
     installPath: form.installPath,
     proxy: form.proxy || undefined,
     sourceRef: installSourceRef,
     distribution: plusDistribution,
+    toolchain: targetRuntime.isWsl
+      ? { mode: 'system', git: 'git', node: 'node', npm: 'npm', pnpm: 'corepack pnpm' }
+      : process.platform === 'win32'
+        ? { mode: 'bundled', git: embeddedGitPath, node: embeddedNodePath, npm: join(nodeRuntimeDirectory, 'npm.cmd'), pnpm: join(nodeRuntimeDirectory, 'pnpm.cmd') }
+        : { mode: 'system', git: 'git', node: process.execPath, npm: 'npm', pnpm: 'pnpm' },
     dshHome,
     port,
     candidatePort: Number(form.candidatePort),
@@ -741,7 +753,7 @@ async function install(form) {
   const port = await validateInstall(form)
   const targetRuntime = new TargetRuntime(form.target)
   await assertLocalPortsAvailable(form, [port, Number(form.candidatePort), Number(form.supervisorPort), Number(form.candidateSupervisorPort)])
-  const networkEnvironment = proxyEnvironment(form.proxy)
+  const networkEnvironment = toolEnvironment(targetRuntime, proxyEnvironment(form.proxy))
   const configured = runtimeFor(form, port)
   busy = 'Installing DeepSeek Harness Plus...'
   refreshTray()
@@ -830,7 +842,7 @@ async function assertInstalled() {
 async function applyUpgrade(sourceRef) {
   await assertInstalled()
   const targetRuntime = new TargetRuntime(runtime.target)
-  const networkEnvironment = proxyEnvironment(runtime.proxy)
+  const networkEnvironment = toolEnvironment(targetRuntime, proxyEnvironment(runtime.proxy))
   const restart = (await daemon.snapshot()).state === 'running'
   const report = message => { busy = message; updatesWindow?.webContents.send('updates:progress', { message }); refreshTray() }
   const installText = installMessages(runtime.locale)
@@ -859,7 +871,7 @@ async function repair() {
   await action(trayText('repair'), async () => {
     await assertInstalled()
     const targetRuntime = new TargetRuntime(runtime.target)
-    const networkEnvironment = proxyEnvironment(runtime.proxy)
+    const networkEnvironment = toolEnvironment(targetRuntime, proxyEnvironment(runtime.proxy))
     const restart = (await daemon.snapshot()).state === 'running'
     const report = message => { busy = message; refreshTray() }
     const installText = installMessages(runtime.locale)
@@ -1068,7 +1080,7 @@ function launchNativeSupervisor(scriptPath, args, config, environment) {
   }
   const child = utilityProcess.fork(scriptPath, args, {
     cwd: config.installPath,
-    env: { ...process.env, ...environment },
+    env: { ...process.env, ...toolEnvironment(new TargetRuntime({ kind: 'native' }), environment) },
     stdio: 'pipe',
     serviceName: 'DeepSeek Harness Plus Supervisor',
   })
@@ -1089,7 +1101,7 @@ const daemon = new HarnessDaemon(status => {
 
 /** 将历史本机配置提升为当前的显式 target、实例和 Supervisor 端口配置。 */
 async function migrateRuntime(saved) {
-  if (saved.version === 5) return saved
+  if (saved.version === 6) return saved
   const settings = parseYaml(await readFile(join(saved.dshHome, 'settings.yaml'), 'utf8'))
   return runtimeFor({
     target: saved.target ?? { kind: 'native' },
