@@ -102,9 +102,11 @@ test('installer validates directory provider proxy and retry controls', async ({
     await expect(page.locator('#summary')).toContainText('3183')
     await expect(page.locator('#summary')).toContainText('覆盖安装，保留用户数据')
     await expect(page.locator('#summary')).toContainText(process.platform === 'win32' ? '已内置 Git、Node.js 和 pnpm' : '已内置 Node.js 和 pnpm')
-    await expect(page.locator('#summary')).toContainText('自动切换国内镜像')
+    await expect(page.locator('#summary')).toContainText('自动选择可用源（含国内镜像）')
 
     await page.getByRole('button', { name: '安装', exact: true }).click()
+    await expect(page.locator('#progressText')).toHaveText('下载暂时失败，正在自动重试…', { timeout: 30_000 })
+    await expect(page.locator('#progressDetail')).toContainText('Will retry in')
     await expect(page.locator('#retryInstall')).toBeVisible({ timeout: 60_000 })
     await expect(page.locator('#error')).toContainText('请检查网络或下载代理后重试。')
     await page.locator('#retryInstall').click()
@@ -149,7 +151,7 @@ test('installer completes a native Harness installation and starts Supervisor', 
     await expect(page.getByRole('heading', { name: '确认安装' })).toBeVisible()
     await expect(page.locator('#summary')).toContainText(String(supervisorPort))
     await expect(page.locator('#summary')).toContainText(process.platform === 'win32' ? '已内置 Git、Node.js 和 pnpm' : '已内置 Node.js 和 pnpm')
-    await expect(page.locator('#summary')).toContainText('自动切换国内镜像')
+    await expect(page.locator('#summary')).toContainText('自动选择可用源（含国内镜像）')
 
     const installerFinished = Promise.race([
       page.waitForEvent('close', { timeout: 43 * 60_000 }).then(() => ({ closed: true })).catch(() => undefined),

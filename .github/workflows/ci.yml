@@ -51,5 +51,9 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - if: matrix.name == 'windows'
+        run: pnpm run prepare:runtime
+      - if: matrix.name == 'windows'
+        run: pnpm exec playwright test --config=playwright.config.mjs --grep 'installer completes a native Harness installation'
       - run: pnpm run ${{ matrix.script }}
       - run: pnpm run verify:unpacked-imports

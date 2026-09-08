@@ -6,4 +6,5 @@ vendor/plus-rc22/
 vendor/node/
 vendor/git/
 vendor/official-source/
+vendor/windows-native/
 *.tgz

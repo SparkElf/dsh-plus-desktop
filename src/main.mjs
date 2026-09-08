@@ -28,9 +28,11 @@ const gitRuntimeDirectory = process.env.DSH_PLUS_INSTALL_GIT_DIRECTORY ?? (app.i
 const embeddedGitPath = join(gitRuntimeDirectory, 'cmd', 'git.exe')
 const sourceBundleDirectory = process.env.DSH_PLUS_INSTALL_SOURCE_DIRECTORY ?? (app.isPackaged ? join(process.resourcesPath, 'official-source') : join(currentDirectory, '..', 'vendor', 'official-source'))
 const sourceBundlePath = process.env.DSH_PLUS_INSTALL_SOURCE_BUNDLE ?? join(sourceBundleDirectory, 'official-source.bundle')
-const primaryNpmRegistry = process.env.DSH_PLUS_INSTALL_PRIMARY_REGISTRY ?? 'https://registry.npmjs.org'
+const windowsNativeDirectory = process.env.DSH_PLUS_INSTALL_WINDOWS_NATIVE_DIRECTORY ?? (app.isPackaged ? join(process.resourcesPath, 'windows-native') : join(currentDirectory, '..', 'vendor', 'windows-native'))
+const officialNpmRegistry = 'https://registry.npmjs.org'
+const configuredPrimaryNpmRegistry = process.env.DSH_PLUS_INSTALL_PRIMARY_REGISTRY
 const mainlandNpmRegistry = process.env.DSH_PLUS_INSTALL_MAINLAND_REGISTRY ?? 'https://registry.npmmirror.com'
-const registryNetworkFailure = /ERR_PNPM_(?:FETCH|META_FETCH_FAIL)|ECONN(?:REFUSED|RESET|ABORTED)|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|timed out|fetch failed|socket hang up|HTTP [45]\d\d/iu
+const registryNetworkFailure = /ERR_PNPM_(?:FETCH|META_FETCH_FAIL)|ECONN(?:REFUSED|RESET|ABORTED)|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|timed out|fetch failed|socket hang up|error \(23\)|HTTP [45]\d\d/iu
 const registryPreflightTimeoutMs = 20_000
 const supervisorBootstrapPath = join(supervisorDirectory, 'supervisor-bootstrap.mjs')
 const setupPath = () => join(app.getPath('userData'), 'runtime.json')
@@ -155,12 +157,17 @@ function registryEnvironment(environment, registry) {
   return { ...(environment ?? {}), pnpm_config_registry: registry }
 }
 
-/** npm下载源由本次安装会话单独拥有；只在可识别的外部网络错误后切换一次大陆镜像。 */
+function registryOrder(locale) {
+  if (configuredPrimaryNpmRegistry !== undefined) return [configuredPrimaryNpmRegistry, mainlandNpmRegistry]
+  return locale === 'zh' ? [mainlandNpmRegistry, officialNpmRegistry] : [officialNpmRegistry, mainlandNpmRegistry]
+}
+
+/** npm下载源由本次安装会话单独拥有；按界面地区选择首选源，网络失败后只切换一次。 */
 class RegistrySession {
-  constructor(environment, onSwitch) {
+  constructor(environment, locale, onSwitch) {
     this.environment = environment
     this.onSwitch = onSwitch
-    this.registry = primaryNpmRegistry
+    ;[this.registry, this.fallbackRegistry] = registryOrder(locale)
   }
 
   async run(operation) {
@@ -168,13 +175,14 @@ class RegistrySession {
       return await operation(registryEnvironment(this.environment, this.registry))
     } catch (error) {
       console.error('[plus-desktop] npm registry operation failed', error)
-      if (this.registry !== primaryNpmRegistry || !registryNetworkFailure.test(error instanceof Error ? error.message : String(error))) throw error
-      this.registry = mainlandNpmRegistry
+      if (this.fallbackRegistry === undefined || !registryNetworkFailure.test(error instanceof Error ? error.message : String(error))) throw error
+      this.registry = this.fallbackRegistry
+      this.fallbackRegistry = undefined
       this.onSwitch(this.registry)
       try {
         return await operation(registryEnvironment(this.environment, this.registry))
       } catch (mirrorError) {
-        console.error('[plus-desktop] mainland npm registry operation failed', mirrorError)
+        console.error('[plus-desktop] fallback npm registry operation failed', mirrorError)
         throw mirrorError
       }
     }
@@ -468,16 +476,16 @@ async function updateExistingWithRetry(targetRuntime, form, networkEnvironment, 
   }
 }
 
-async function installDependencies(targetRuntime, form, registrySession, report, installText, preserveTarget) {
+async function installDependencies(targetRuntime, form, registrySession, report, installText, updateLockfile) {
   try {
+    const args = ['install', updateLockfile ? '--no-frozen-lockfile' : '--frozen-lockfile']
     await registrySession.run(environment => targetRuntime.runPnpm(
-      ['install', '--frozen-lockfile'],
+      args,
       form.installPath,
-      () => report(58, installText.installing),
+      line => report(58, line.includes('Will retry in') ? installText.retryingRegistry : installText.installing, line.includes('Will retry in') ? line : undefined),
       { env: environment },
     ))
   } catch (error) {
-    if (!preserveTarget) await targetRuntime.resetInstallDirectory(form.installPath)
     throw new RetryableInstallError((error instanceof Error ? error.message : String(error)) + installText.retryHint)
   }
 }
@@ -642,6 +650,29 @@ async function startRuntimeWithTakeover() {
   }
 }
 
+/** Windows native安装临时使用与内嵌Node ABI一致的预编译fs-ext，并在结束后恢复official文件。 */
+async function prepareWindowsNativeOverride(targetRuntime, installPath) {
+  if (process.platform !== 'win32' || targetRuntime.isWsl) return undefined
+  const native = JSON.parse(await readFile(join(windowsNativeDirectory, 'runtime.json'), 'utf8'))
+  const node = JSON.parse(await readFile(join(nodeRuntimeDirectory, 'runtime.json'), 'utf8'))
+  if (native.modules !== node.modules) throw new Error('Prebuilt fs-ext ABI ' + native.modules + ' does not match bundled Node ABI ' + node.modules)
+  const packageDirectory = targetRuntime.join(installPath, '.dsh-plus', 'packages')
+  await targetRuntime.makeDirectory(packageDirectory)
+  const archive = targetRuntime.join(packageDirectory, native.file)
+  await targetRuntime.copyFromHost(join(windowsNativeDirectory, native.file), archive)
+  const workspacePath = targetRuntime.join(installPath, 'pnpm-workspace.yaml')
+  const lockPath = targetRuntime.join(installPath, 'pnpm-lock.yaml')
+  const workspaceText = await targetRuntime.readText(workspacePath)
+  const lockText = await targetRuntime.readText(lockPath)
+  const workspace = parseYaml(workspaceText)
+  workspace.overrides = { ...(workspace.overrides ?? {}), 'fs-ext': 'file:' + archive.replaceAll('\\', '/') }
+  await targetRuntime.writeText(workspacePath, stringifyYaml(workspace))
+  return async () => {
+    await targetRuntime.writeText(workspacePath, workspaceText)
+    await targetRuntime.writeText(lockPath, lockText)
+  }
+}
+
 /** Install and materialize the immutable Plus distribution in one DSH home. */
 async function materializePlus(targetRuntime, configured, registrySession, report) {
   const closure = JSON.parse(await readFile(join(closureDirectory, 'plus-closure.json'), 'utf8'))
@@ -694,12 +725,12 @@ function installMessages(locale) {
     ? {
         preparing: '正在准备安装…', checking: '正在检查安装环境…', source: '正在准备内置 Harness 源码…', downloading: '正在下载 Harness…',
         configuring: '正在写入设置…', overwriting: '正在更新已有 Harness…', installing: '正在安装依赖…', building: '正在构建 Harness…',
-        starting: '正在启动 Harness…', retrying: '下载失败，正在重试…', switchingRegistry: 'npm 官方源连接失败，正在切换国内镜像…', retryHint: ' 请检查网络或下载代理后重试。', complete: '安装完成。',
+        starting: '正在启动 Harness…', retrying: '下载失败，正在重试…', retryingRegistry: '下载暂时失败，正在自动重试…', switchingRegistry: '当前下载源不可用，正在切换备用源…', retryHint: ' 请检查网络或下载代理后重试。', complete: '安装完成。',
       }
     : {
         preparing: 'Preparing installation…', checking: 'Checking the installation environment…', source: 'Preparing the bundled Harness source…', downloading: 'Downloading Harness…',
         configuring: 'Writing settings…', overwriting: 'Updating existing Harness…', installing: 'Installing dependencies…', building: 'Building Harness…',
-        starting: 'Starting Harness…', retrying: 'Download failed, retrying…', switchingRegistry: 'The npm registry is unavailable; switching to the mainland mirror…', retryHint: ' Check the network or download proxy and retry.', complete: 'Installation complete.',
+        starting: 'Starting Harness…', retrying: 'Download failed, retrying…', retryingRegistry: 'The download was interrupted; retrying automatically…', switchingRegistry: 'The current npm source is unavailable; switching to the alternate source…', retryHint: ' Check the network or download proxy and retry.', complete: 'Installation complete.',
       }
 }
 
@@ -715,21 +746,22 @@ async function install(form) {
   busy = 'Installing DeepSeek Harness Plus...'
   refreshTray()
   try {
-    let registryDetail = primaryNpmRegistry
+    let registryDetail
     const report = (percent, message, detail = registryDetail) => {
       busy = message
       sendInstaller('install:progress', { percent, message, detail })
       refreshTray()
     }
     const installText = installMessages(form.locale)
-    const registrySession = new RegistrySession(networkEnvironment, registry => { registryDetail = registry; report(48, installText.switchingRegistry) })
+    const registrySession = new RegistrySession(networkEnvironment, form.locale, registry => { registryDetail = registry; report(48, installText.switchingRegistry) })
+    registryDetail = registrySession.registry
     report(2, installText.preparing)
     report(7, installText.checking)
     await targetRuntime.run(gitCommandFor(targetRuntime), ['--version'], undefined, undefined, { env: networkEnvironment })
     report(10, installText.checking)
     await targetRuntime.runPnpm(['--version'], undefined, undefined, { env: networkEnvironment })
     try {
-      await registrySession.run(environment => targetRuntime.runPnpm(['view', 'pnpm', 'version'], undefined, undefined, { env: environment, timeoutMs: registryPreflightTimeoutMs }))
+      await registrySession.run(environment => targetRuntime.runPnpm(['view', 'pnpm', 'version'], undefined, line => report(10, line.includes('Will retry in') ? installText.retryingRegistry : installText.checking, line.includes('Will retry in') ? line : undefined), { env: environment, timeoutMs: registryPreflightTimeoutMs }))
     } catch (error) {
       throw new RetryableInstallError((error instanceof Error ? error.message : String(error)) + installText.retryHint)
     }
@@ -756,9 +788,19 @@ async function install(form) {
     if (!await targetRuntime.fileExists(settingsPath)) await targetRuntime.writeText(settingsPath, settingsDocument(form))
     if (!await targetRuntime.fileExists(credentialsPath)) await targetRuntime.writeText(credentialsPath, credentialsDocument(form))
     report(48, installText.installing)
-    await installDependencies(targetRuntime, form, registrySession, report, installText, overwriteExisting)
-    report(76, installText.building)
-    await materializePlus(targetRuntime, configured, registrySession, () => report(86, installText.building))
+    try {
+      const restoreNativeOverride = await prepareWindowsNativeOverride(targetRuntime, form.installPath)
+      try {
+        await installDependencies(targetRuntime, form, registrySession, report, installText, restoreNativeOverride !== undefined)
+        report(76, installText.building)
+        await materializePlus(targetRuntime, configured, registrySession, line => report(86, line.includes('Will retry in') ? installText.retryingRegistry : installText.building, line.includes('Will retry in') ? line : undefined))
+      } finally {
+        if (restoreNativeOverride !== undefined) await restoreNativeOverride()
+      }
+    } catch (error) {
+      if (!overwriteExisting) await targetRuntime.resetInstallDirectory(form.installPath)
+      throw error
+    }
     if (runtime !== undefined) {
       await Promise.race([daemon.stop(), new Promise(resolve => setTimeout(resolve, QUIT_STOP_BUDGET_MS))]).catch(() => {})
     }
@@ -792,13 +834,19 @@ async function applyUpgrade(sourceRef) {
   const restart = (await daemon.snapshot()).state === 'running'
   const report = message => { busy = message; updatesWindow?.webContents.send('updates:progress', { message }); refreshTray() }
   const installText = installMessages(runtime.locale)
-  const registrySession = new RegistrySession(networkEnvironment, registry => report(installText.switchingRegistry + ' ' + registry))
+  const registrySession = new RegistrySession(networkEnvironment, runtime.locale, registry => report(installText.switchingRegistry + ' ' + registry))
   const git = gitCommandFor(targetRuntime)
   await targetRuntime.run(git, ['remote', 'set-url', 'origin', repository], runtime.installPath)
   await targetRuntime.run(git, ['fetch', '--depth', '1', 'origin', sourceRef], runtime.installPath, report, { env: networkEnvironment })
   await targetRuntime.run(git, ['reset', '--hard', 'FETCH_HEAD'], runtime.installPath, report)
-  await registrySession.run(environment => targetRuntime.runPnpm(['install', '--frozen-lockfile'], runtime.installPath, report, { env: environment }))
-  await materializePlus(targetRuntime, runtime, registrySession, report)
+  const restoreNativeOverride = await prepareWindowsNativeOverride(targetRuntime, runtime.installPath)
+  try {
+    const args = ['install', restoreNativeOverride === undefined ? '--frozen-lockfile' : '--no-frozen-lockfile']
+    await registrySession.run(environment => targetRuntime.runPnpm(args, runtime.installPath, report, { env: environment }))
+    await materializePlus(targetRuntime, runtime, registrySession, report)
+  } finally {
+    if (restoreNativeOverride !== undefined) await restoreNativeOverride()
+  }
   if (restart) await daemon.restart(false)
   await saveRuntime({ ...runtime, sourceRef })
 }
@@ -815,9 +863,15 @@ async function repair() {
     const restart = (await daemon.snapshot()).state === 'running'
     const report = message => { busy = message; refreshTray() }
     const installText = installMessages(runtime.locale)
-    const registrySession = new RegistrySession(networkEnvironment, registry => report(installText.switchingRegistry + ' ' + registry))
-    await registrySession.run(environment => targetRuntime.runPnpm(['install', '--frozen-lockfile'], runtime.installPath, report, { env: environment }))
-    await materializePlus(targetRuntime, runtime, registrySession, report)
+    const registrySession = new RegistrySession(networkEnvironment, runtime.locale, registry => report(installText.switchingRegistry + ' ' + registry))
+    const restoreNativeOverride = await prepareWindowsNativeOverride(targetRuntime, runtime.installPath)
+    try {
+      const args = ['install', restoreNativeOverride === undefined ? '--frozen-lockfile' : '--no-frozen-lockfile']
+      await registrySession.run(environment => targetRuntime.runPnpm(args, runtime.installPath, report, { env: environment }))
+      await materializePlus(targetRuntime, runtime, registrySession, report)
+    } finally {
+      if (restoreNativeOverride !== undefined) await restoreNativeOverride()
+    }
     if (restart) await daemon.restart(false)
   })
 }

@@ -9,15 +9,15 @@ English | [中文](README.zh.md)
 
 ## Install
 
-Desktop 0.2.0-rc.4 is the installable companion for `@sparkelf/dsh-plus@0.1.0-rc.22`. Download the platform installer from the matching GitHub Release:
+Desktop 0.2.0-rc.5 is the installable companion for `@sparkelf/dsh-plus@0.1.0-rc.22`. Download the platform installer from the matching GitHub Release:
 
-- Windows x64: `DeepSeek.Harness.Plus.Setup.0.2.0-rc.4.exe`
-- Linux x64: `deepseek-harness-plus-0.2.0-rc.4.AppImage`
-- Debian/Ubuntu x64: `deepseek-harness-plus-0.2.0-rc.4.deb`
+- Windows x64: `DeepSeek.Harness.Plus.Setup.0.2.0-rc.5.exe`
+- Linux x64: `deepseek-harness-plus-0.2.0-rc.5.AppImage`
+- Debian/Ubuntu x64: `deepseek-harness-plus-0.2.0-rc.5.deb`
 
 The first-run wizard selects an installation directory, ports, proxy, model provider, and API credential. It clones the embedded official DeepSeek Harness revision `d347e703908d0406b7a7ef80e3a0e594d86b2215`, installs the exact Plus distribution, applies its source patches, performs an official build, writes the isolated DSH home, and starts the external Supervisor. Existing user settings and data remain under the selected installation's `.dsh-plus/home`.
 
-The Windows installer bundles Electron, a licensed standalone Node runtime, pnpm, MinGit 2.55.0.5, the exact official source Git bundle, and the 27 reviewed tarballs in the Plus rc.22 closure. The machine does not need a preinstalled Git or Node.js. Dependency installation starts with the official npm registry and switches to `https://registry.npmmirror.com` after a registry network failure. The wizard supports HTTP, HTTPS, and SOCKS5 proxy URLs.
+The Windows installer bundles Electron, a licensed standalone Node runtime, pnpm, MinGit 2.55.0.5, the exact official source Git bundle, and the 27 reviewed tarballs in the Plus rc.22 closure. The machine does not need a preinstalled Git or Node.js. Chinese installations prefer `https://registry.npmmirror.com` and fall back to the official npm registry; English installations use the reverse order. A registry download warning such as `error (23)` also triggers the alternate source when the command fails. The wizard supports HTTP, HTTPS, and SOCKS5 proxy URLs. Windows native dependencies are precompiled in CI for the bundled Node ABI; users do not need Python, node-gyp, Visual Studio Build Tools, or the Windows SDK.
 
 ## Release Binding
 
@@ -40,7 +40,7 @@ The required CI runs the tray API test, npm pack boundary check, Electron instal
 
 ## Known Limitations
 
-- 0.2.0-rc.4 installers are unsigned prerelease artifacts; Windows SmartScreen or Linux desktop security may require explicit confirmation.
+- 0.2.0-rc.5 installers are unsigned prerelease artifacts; Windows SmartScreen or Linux desktop security may require explicit confirmation.
 - macOS packaging remains disabled until the release has a signing and notarization identity.
 - First installation compiles the official Harness source on the target machine and therefore takes longer than an application-only installer.
 - Native Windows installation uses the bundled MinGit runtime. The advanced WSL target still requires Git and Node.js inside the selected distribution.

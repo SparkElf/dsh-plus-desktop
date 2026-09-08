@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { cp, mkdtemp, readFile, readdir, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -42,7 +43,24 @@ async function main() {
   if (process.platform === 'win32') {
     const gitResult = spawnSync(join(resources, 'git-runtime', 'cmd', 'git.exe'), ['--version'], { encoding: 'utf8', windowsHide: true })
     if (gitResult.status !== 0) throw new Error('packaged MinGit runtime failed: ' + gitResult.stderr.trim())
-    console.log('[verify-unpacked-imports] ' + gitResult.stdout.trim())
+    const native = JSON.parse(await readFile(join(resources, 'windows-native', 'runtime.json'), 'utf8'))
+    const node = JSON.parse(await readFile(join(resources, 'node-runtime', 'runtime.json'), 'utf8'))
+    if (native.modules !== node.modules) throw new Error('packaged fs-ext ABI does not match packaged Node')
+    const archive = join(resources, 'windows-native', native.file)
+    const digest = createHash('sha256').update(await readFile(archive)).digest('hex')
+    if (digest !== native.sha256) throw new Error('packaged fs-ext tarball checksum mismatch')
+    const nativeProbe = await mkdtemp(join(tmpdir(), 'dsh-fs-ext-verify-'))
+    try {
+      const unpack = spawnSync('tar', ['-xzf', archive, '-C', nativeProbe], { encoding: 'utf8', windowsHide: true })
+      if (unpack.status !== 0) throw new Error('packaged fs-ext tarball failed to extract: ' + unpack.stderr.trim())
+      const packagedManifest = JSON.parse(await readFile(join(nativeProbe, 'package', 'package.json'), 'utf8'))
+      if (packagedManifest.scripts?.install !== 'node -e ""') throw new Error('packaged fs-ext does not suppress source compilation')
+      const nativeResult = spawnSync(join(resources, 'node-runtime', nodeName), ['-e', 'require(process.argv[1])', join(nativeProbe, 'package')], { encoding: 'utf8', windowsHide: true })
+      if (nativeResult.status !== 0) throw new Error('packaged fs-ext failed to load: ' + nativeResult.stderr.trim())
+    } finally {
+      await rm(nativeProbe, { recursive: true, force: true })
+    }
+    console.log('[verify-unpacked-imports] ' + gitResult.stdout.trim() + '; fs-ext ABI ' + native.modules)
   }
   console.log('[verify-unpacked-imports] official source ' + sourceManifest.revision + '; closure 27; Node ' + nodeResult.stdout.trim())
   const yamlManifest = join(unpacked, 'node_modules', 'yaml', 'package.json')

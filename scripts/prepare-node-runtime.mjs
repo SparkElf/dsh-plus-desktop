@@ -14,5 +14,5 @@ for (const candidate of [join(dirname(process.execPath), 'LICENSE'), join(dirnam
 }
 if (license === undefined) throw new Error('The selected Node distribution does not include LICENSE')
 await writeFile(join(destination, 'LICENSE'), license)
-await writeFile(join(destination, 'runtime.json'), JSON.stringify({ version: process.version, platform: process.platform, arch: process.arch, binary: binaryName }, null, 2) + String.fromCharCode(10))
+await writeFile(join(destination, 'runtime.json'), JSON.stringify({ version: process.version, modules: process.versions.modules, platform: process.platform, arch: process.arch, binary: binaryName }, null, 2) + String.fromCharCode(10))
 console.log('Embedded Node runtime ready: ' + process.version + ' ' + process.platform + '-' + process.arch)
