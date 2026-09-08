@@ -52,5 +52,4 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run ${{ matrix.script }}
-      - if: matrix.name == 'linux'
-        run: pnpm run verify:unpacked-imports
+      - run: pnpm run verify:unpacked-imports
