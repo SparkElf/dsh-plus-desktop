@@ -3,7 +3,6 @@ import { cp, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from 'n
 import { tmpdir } from 'node:os'
 import { delimiter, dirname, join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
-import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { stringify } from 'yaml'
 
@@ -39,9 +38,8 @@ if (process.platform !== 'win32') {
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
     manifest.scripts.install = 'node -e ""'
     await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + String.fromCharCode(10))
-    const require = createRequire(join(staged, 'package.json'))
-    require(staged)
-    run('npm', ['pack', '--pack-destination', destination], staged, environment, true)
+    run(process.execPath, ['-e', 'require(process.argv[1])', staged], working, environment)
+    run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['pack', '--pack-destination', destination], staged, environment)
     const source = join(destination, 'fs-ext-2.1.1.tgz')
     const file = 'fs-ext-2.1.1-win32-x64-node' + process.versions.modules + '.tgz'
     await rename(source, join(destination, file))
@@ -53,8 +51,8 @@ if (process.platform !== 'win32') {
   }
 }
 
-function run(command, args, cwd, env, shell = false) {
-  const result = spawnSync(command, args, { cwd, env, shell, encoding: 'utf8', windowsHide: true })
+function run(command, args, cwd, env) {
+  const result = spawnSync(command, args, { cwd, env, encoding: 'utf8', windowsHide: true })
   if (result.error !== undefined) throw result.error
   if (result.status !== 0) throw new Error(command + ' ' + args.join(' ') + ' failed: ' + [result.stdout, result.stderr].filter(Boolean).join('\n').trim())
   return result.stdout.trim()
