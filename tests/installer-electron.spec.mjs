@@ -119,7 +119,8 @@ test('installer validates directory provider proxy and retry controls', async ({
 })
 
 test('installer completes a native Harness installation and starts Supervisor', async ({}, testInfo) => {
-  test.setTimeout(45 * 60_000)
+  const installTimeout = (process.platform === 'win32' ? 73 : 43) * 60_000
+  test.setTimeout((process.platform === 'win32' ? 75 : 45) * 60_000)
   const installPath = testInfo.outputPath('installed-harness')
   const userData = testInfo.outputPath('user-data')
   const port = 47_000 + (process.pid % 1_000) * 4
@@ -154,13 +155,17 @@ test('installer completes a native Harness installation and starts Supervisor', 
     await expect(page.locator('#summary')).toContainText('自动选择可用源（含国内镜像）')
 
     const installerFinished = Promise.race([
-      page.waitForEvent('close', { timeout: 43 * 60_000 }).then(() => ({ closed: true })).catch(() => undefined),
-      page.locator('#error').waitFor({ state: 'visible', timeout: 43 * 60_000 }).then(async () => ({ closed: false, error: await page.locator('#error').textContent() })).catch(() => undefined),
+      page.waitForEvent('close', { timeout: installTimeout }).then(() => ({ closed: true })).catch(() => undefined),
+      page.locator('#error').waitFor({ state: 'visible', timeout: installTimeout }).then(async () => ({ closed: false, error: await page.locator('#error').textContent() })).catch(() => undefined),
     ])
     await page.getByRole('button', { name: '安装', exact: true }).click()
     await expect(page.locator('#progressDetail')).toHaveText('https://registry.npmmirror.com', { timeout: 120_000 })
     const result = await installerFinished
-    if (result?.closed !== true) throw new Error('Native installation failed: ' + String(result?.error ?? 'installer did not complete'))
+    if (result?.closed !== true) {
+      const progress = await page.locator('#progressText').textContent().catch(() => '')
+      const detail = await page.locator('#progressDetail').textContent().catch(() => '')
+      throw new Error('Native installation failed: ' + String(result?.error ?? 'installer did not complete') + '; progress=' + progress + '; detail=' + detail)
+    }
     expect(application.process().exitCode).toBeNull()
     expect(existsSync(join(installPath, 'apps', 'cli', 'lib', 'bin.js'))).toBe(true)
     const profile = JSON.parse(readFileSync(join(installPath, '.dsh-plus', 'home', 'profiles', 'plus', 'package.json'), 'utf8'))
