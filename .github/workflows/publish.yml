@@ -40,7 +40,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - if: matrix.name == 'linux'
-        run: pnpm run prepare:runtime
+        run: node --version && npm --version && pnpm --version
       - if: matrix.name == 'linux'
         run: xvfb-run -a pnpm exec playwright test --config=playwright.config.mjs --grep 'installer validates directory'
       - run: pnpm run ${{ matrix.script }}
