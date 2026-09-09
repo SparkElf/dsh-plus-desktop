@@ -8,3 +8,5 @@ allowBuilds:
 
 linkWorkspacePackages: true
 preferWorkspacePackages: true
+minimumReleaseAgeExclude:
+  - '@sparkelf/dsh-plugin-supervisor@0.1.4'
