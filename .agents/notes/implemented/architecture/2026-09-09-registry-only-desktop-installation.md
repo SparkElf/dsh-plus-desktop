@@ -10,7 +10,7 @@ The Desktop installer previously carried a large Plus package closure, a prebuil
 
 ## Decision
 
-Desktop installs the exact official DSH 0.1.5 source revision and resolves @sparkelf/dsh-plus@0.1.0-rc.23 from npm during profile materialization. Git, Node.js, npm, and pnpm remain system toolchain requirements on native Windows targets. The Desktop package keeps only its Supervisor runtime and Electron assets; it does not carry ordinary Plus tarballs, an fs-ext prebuild, a pnpm bundle, or source closure resources.
+Desktop installs the exact official DSH 0.1.5-alpha.2 source revision and resolves @sparkelf/dsh-plus@0.1.0-rc.24 from npm during profile materialization. Git, Node.js, npm, and pnpm remain system toolchain requirements on native Windows targets. The Desktop package keeps only its Supervisor runtime and Electron assets; it does not carry ordinary Plus tarballs, an fs-ext prebuild, a pnpm bundle, or source closure resources.
 
 The installer writes a minimal profile manifest, runs the system pnpm commands, applies the Plus profile, and builds the selected official source checkout. Retry paths rerun installation from the written manifest so interrupted dependency downloads are recoverable.
 
