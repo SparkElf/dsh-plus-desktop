@@ -168,7 +168,7 @@ test('installer completes a native Harness installation and starts Supervisor', 
     expect(application.process().exitCode).toBeNull()
     expect(existsSync(join(installPath, 'apps', 'cli', 'lib', 'bin.js'))).toBe(true)
     const profile = JSON.parse(readFileSync(join(installPath, '.dsh-plus', 'home', 'profiles', 'plus', 'package.json'), 'utf8'))
-    expect(profile.dependencies['@sparkelf/dsh-plus']).toContain('0.1.0-rc.22')
+    expect(profile.dependencies['@sparkelf/dsh-plus']).toContain('0.1.0-rc.23')
     await expect.poll(async () => {
       try { return (await fetch(runtimeURL)).ok } catch { return false }
     }, { timeout: 30_000 }).toBe(true)

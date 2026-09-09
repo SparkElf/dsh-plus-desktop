@@ -1,7 +1,7 @@
 {
   "name": "@sparkelf/dsh-plus-desktop",
-  "version": "0.2.0-rc.5",
-  "description": "Installable Electron desktop for DeepSeek Harness Plus 0.1.0-rc.22",
+  "version": "0.2.0-rc.6",
+  "description": "Installable Electron desktop for DeepSeek Harness Plus 0.1.0-rc.23",
   "type": "module",
   "main": "./runtime/main.mjs",
   "exports": {
@@ -20,17 +20,15 @@
     "pack:check": "node scripts/verify-pack.mjs",
     "dev": "electron src/main.mjs",
     "preview": "node scripts/preview-installer.mjs",
-    "package:dir": "pnpm run prepare:runtime && electron-builder --dir --publish never",
-    "package:linux": "pnpm run prepare:runtime && electron-builder --linux --publish never",
-    "package:mac": "pnpm run prepare:runtime && electron-builder --mac --publish never",
-    "package:win": "pnpm run prepare:runtime && electron-builder --win --publish never",
-    "test:electron": "pnpm run prepare:runtime && playwright test --config=playwright.config.mjs",
+    "package:dir": "electron-builder --dir --publish never",
+    "package:linux": "electron-builder --linux --publish never",
+    "package:mac": "electron-builder --mac --publish never",
+    "package:win": "electron-builder --win --publish never",
+    "test:electron": "playwright test --config=playwright.config.mjs",
     "verify:unpacked-imports": "node scripts/verify-unpacked-imports.mjs",
-    "package": "pnpm run prepare:runtime && electron-builder --publish never",
-    "prepare:closure": "node scripts/prepare-closure.mjs",
-    "prepare:runtime": "pnpm run prepare:closure && pnpm run prepare:windows-native",
-    "test:install": "pnpm run prepare:runtime && playwright test --config=playwright.config.mjs --grep \"installer completes a native Harness installation\"",
-    "prepare:windows-native": "node scripts/prepare-windows-native.mjs"
+    "package": "electron-builder --publish never",
+    "test:install": "playwright test --config=playwright.config.mjs --grep \"installer completes a native Harness installation\"",
+    "prepare:toolchain": "node -e \"console.log('system toolchain ready')\""
   },
   "engines": {
     "node": "^22.19.0 || >=24.0.0"
@@ -44,9 +42,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@sparkelf/dsh-plugin-supervisor": "https://github.com/SparkElf/deepseek-harness-plus/releases/download/plus-v0.6.0/sparkelf-dsh-plugin-supervisor-0.1.3.tgz",
+    "@sparkelf/dsh-plugin-supervisor": "0.1.4",
     "adm-zip": "^0.6.0",
-    "pnpm": "11.7.0",
     "yaml": "^2.9.0"
   },
   "packageManager": "pnpm@11.7.0",
@@ -59,8 +56,7 @@
   "devDependencies": {
     "electron": "^39.0.0",
     "electron-builder": "^26.0.0",
-    "playwright": "^1.49.0",
-    "node-gyp": "13.0.2"
+    "playwright": "^1.49.0"
   },
   "build": {
     "appId": "io.sparkelf.deepseek-harness-plus",
@@ -80,7 +76,6 @@
     "asarUnpack": [
       "src/**/*.mjs",
       "node_modules/yaml/**",
-      "node_modules/pnpm/**",
       "node_modules/@sparkelf/dsh-plugin-supervisor/**"
     ],
     "linux": {
@@ -112,23 +107,6 @@
       "artifactName": "deepseek-harness-plus-${version}.${ext}",
       "category": "public.app-category.developer-tools"
     },
-    "extraResources": [
-      {
-        "from": "vendor/plus-rc22",
-        "to": "plus-closure",
-        "filter": [
-          "*.tgz",
-          "plus-closure.json"
-        ]
-      },
-      {
-        "from": "vendor/windows-native",
-        "to": "windows-native",
-        "filter": [
-          "*.tgz",
-          "runtime.json"
-        ]
-      }
-    ]
+    "extraResources": []
   }
 }

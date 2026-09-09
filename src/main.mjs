@@ -6,7 +6,6 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { homedir } from 'node:os'
 import { basename, dirname, isAbsolute, join, resolve, win32 } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createRequire } from 'node:module'
 import { request } from 'node:http'
 import { createServer } from 'node:net'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
@@ -21,9 +20,6 @@ const installSourceRef = process.env.DSH_PLUS_INSTALL_SOURCE_REF ?? OFFICIAL_SOU
 const plusDistribution = process.env.DSH_PLUS_INSTALL_DISTRIBUTION ?? PLUS_DISTRIBUTION
 const currentDirectory = dirname(fileURLToPath(import.meta.url))
 const supervisorDirectory = currentDirectory.replace(/\.asar([\\/])/u, '.asar.unpacked$1')
-const bundledPnpmCli = join(dirname(createRequire(import.meta.url).resolve('pnpm')), 'bin', 'pnpm.mjs')
-const closureDirectory = process.env.DSH_PLUS_INSTALL_CLOSURE ?? (app.isPackaged ? join(process.resourcesPath, 'plus-closure') : join(currentDirectory, '..', 'vendor', 'plus-rc22'))
-const windowsNativeDirectory = process.env.DSH_PLUS_INSTALL_WINDOWS_NATIVE_DIRECTORY ?? (app.isPackaged ? join(process.resourcesPath, 'windows-native') : join(currentDirectory, '..', 'vendor', 'windows-native'))
 const officialNpmRegistry = 'https://registry.npmjs.org'
 const configuredPrimaryNpmRegistry = process.env.DSH_PLUS_INSTALL_PRIMARY_REGISTRY
 const mainlandNpmRegistry = process.env.DSH_PLUS_INSTALL_MAINLAND_REGISTRY ?? 'https://registry.npmmirror.com'
@@ -221,7 +217,7 @@ function runtimeFor(form, port, toolchain) {
     },
     build: {
       command: targetRuntime.isWsl ? 'corepack' : nodeCommand,
-      args: targetRuntime.isWsl ? ['pnpm', 'run', 'build:official'] : [toolchain?.pnpm ?? bundledPnpmCli, 'run', 'build:official'],
+      args: targetRuntime.isWsl ? ['pnpm', 'run', 'build:official'] : [toolchain?.pnpm ?? 'pnpm', 'run', 'build:official'],
       cwd: form.installPath,
     },
     locale: form.locale,
@@ -639,72 +635,14 @@ async function startRuntimeWithTakeover() {
   }
 }
 
-/** Windows native安装临时使用与内嵌Node ABI一致的预编译fs-ext，并在结束后恢复official文件。 */
-async function prepareWindowsNativeOverride(targetRuntime, installPath) {
-  if (process.platform !== 'win32' || targetRuntime.isWsl) return undefined
-  const native = JSON.parse(await readFile(join(windowsNativeDirectory, 'runtime.json'), 'utf8'))
-  if (native.modules !== targetRuntime.toolchain?.modules) throw new Error('Prebuilt fs-ext ABI ' + native.modules + ' does not match selected Node ABI ' + targetRuntime.toolchain?.modules)
-  const packageDirectory = targetRuntime.join(installPath, '.dsh-plus', 'packages')
-  await targetRuntime.makeDirectory(packageDirectory)
-  const archive = targetRuntime.join(packageDirectory, native.file)
-  await targetRuntime.copyFromHost(join(windowsNativeDirectory, native.file), archive)
-  const workspacePath = targetRuntime.join(installPath, 'pnpm-workspace.yaml')
-  const lockPath = targetRuntime.join(installPath, 'pnpm-lock.yaml')
-  const workspaceText = await targetRuntime.readText(workspacePath)
-  const lockText = await targetRuntime.readText(lockPath)
-  const workspace = parseYaml(workspaceText)
-  workspace.overrides = { ...(workspace.overrides ?? {}), 'fs-ext': 'file:' + archive.replaceAll('\\', '/') }
-  await targetRuntime.writeText(workspacePath, stringifyYaml(workspace))
-  return async () => {
-    await targetRuntime.writeText(workspacePath, workspaceText)
-    await targetRuntime.writeText(lockPath, lockText)
-  }
-}
-
-/** Install and materialize the immutable Plus distribution in one DSH home. */
+/** Install and materialize the Plus distribution in one DSH home. */
 async function materializePlus(targetRuntime, configured, registrySession, report) {
-  const closure = JSON.parse(await readFile(join(closureDirectory, 'plus-closure.json'), 'utf8'))
-  const packageDirectory = targetRuntime.join(configured.installPath, '.dsh-plus', 'packages')
   const profilePath = targetRuntime.join(configured.dshHome, 'profiles', 'plus')
-  await targetRuntime.makeDirectory(packageDirectory)
   await targetRuntime.makeDirectory(profilePath)
-  const dependencies = {}
-  const overrides = {}
-  for (const entry of closure.packages) {
-    const target = targetRuntime.join(packageDirectory, entry.file)
-    await targetRuntime.copyFromHost(join(closureDirectory, entry.file), target)
-    const spec = 'file:' + target.replaceAll('\\', '/')
-    overrides[entry.name] = spec
-    if (entry.profileDependency === true) dependencies[entry.name] = spec
-  }
-  if (dependencies['@sparkelf/dsh-plus']?.endsWith('/sparkelf-dsh-plus-0.1.0-rc.22.tgz') !== true) {
-    throw new Error('Desktop closure does not contain @sparkelf/dsh-plus@0.1.0-rc.22')
-  }
-  await targetRuntime.writeText(targetRuntime.join(profilePath, 'package.json'), JSON.stringify({
-    name: 'dsh-profile-plus',
-    private: true,
-    dependencies,
-  }, null, 2) + '\n')
-  await targetRuntime.writeText(targetRuntime.join(profilePath, 'pnpm-workspace.yaml'), stringifyYaml({
-    packages: ['.'],
-    overrides,
-    autoInstallPeers: false,
-    allowBuilds: {
-      '@officecli/officecli': true,
-      'cpu-features': false,
-      'node-pty': true,
-      oracledb: true,
-      protobufjs: false,
-      ssh2: true,
-    },
-  }))
+  await targetRuntime.writeText(targetRuntime.join(profilePath, 'package.json'), JSON.stringify({ name: 'dsh-profile-plus', private: true, dependencies: { '@sparkelf/dsh-plus': plusDistribution } }, null, 2) + '\n')
+  await targetRuntime.writeText(targetRuntime.join(profilePath, 'pnpm-workspace.yaml'), stringifyYaml({ packages: ['.'], autoInstallPeers: false, allowBuilds: { '@officecli/officecli': true, 'cpu-features': false, 'node-pty': true, oracledb: true, protobufjs: false, ssh2: true } }))
   for (const command of materializationCommands({ profilePath, installPath: configured.installPath })) {
-    await registrySession.run(environment => targetRuntime.runPnpm(
-      command.args,
-      command.cwd,
-      report,
-      { env: { ...environment, DSH_HOME: configured.dshHome } },
-    ))
+    await registrySession.run(environment => targetRuntime.runPnpm(command.args, command.cwd, report, { env: { ...environment, DSH_HOME: configured.dshHome } }))
   }
 }
 
@@ -778,14 +716,9 @@ async function install(form) {
     if (!await targetRuntime.fileExists(credentialsPath)) await targetRuntime.writeText(credentialsPath, credentialsDocument(form))
     report(48, installText.installing)
     try {
-      const restoreNativeOverride = await prepareWindowsNativeOverride(targetRuntime, form.installPath)
-      try {
-        await installDependencies(targetRuntime, form, registrySession, report, installText, restoreNativeOverride !== undefined)
-        report(76, installText.building)
-        await materializePlus(targetRuntime, configured, registrySession, line => report(86, line.includes('Will retry in') ? installText.retryingRegistry : installText.building, line.includes('Will retry in') ? line : undefined))
-      } finally {
-        if (restoreNativeOverride !== undefined) await restoreNativeOverride()
-      }
+      await installDependencies(targetRuntime, form, registrySession, report, installText, true)
+      report(76, installText.building)
+      await materializePlus(targetRuntime, configured, registrySession, line => report(86, line.includes('Will retry in') ? installText.retryingRegistry : installText.building, line.includes('Will retry in') ? line : undefined))
     } catch (error) {
       if (!overwriteExisting) await targetRuntime.resetInstallDirectory(form.installPath)
       throw error
@@ -828,14 +761,8 @@ async function applyUpgrade(sourceRef) {
   await targetRuntime.run(git, ['remote', 'set-url', 'origin', repository], runtime.installPath)
   await targetRuntime.run(git, ['fetch', '--depth', '1', 'origin', sourceRef], runtime.installPath, report, { env: networkEnvironment })
   await targetRuntime.run(git, ['reset', '--hard', 'FETCH_HEAD'], runtime.installPath, report)
-  const restoreNativeOverride = await prepareWindowsNativeOverride(targetRuntime, runtime.installPath)
-  try {
-    const args = ['install', restoreNativeOverride === undefined ? '--frozen-lockfile' : '--no-frozen-lockfile']
-    await registrySession.run(environment => targetRuntime.runPnpm(args, runtime.installPath, report, { env: environment }))
-    await materializePlus(targetRuntime, runtime, registrySession, report)
-  } finally {
-    if (restoreNativeOverride !== undefined) await restoreNativeOverride()
-  }
+  await registrySession.run(environment => targetRuntime.runPnpm(['install', '--no-frozen-lockfile'], runtime.installPath, report, { env: environment }))
+  await materializePlus(targetRuntime, runtime, registrySession, report)
   if (restart) await daemon.restart(false)
   await saveRuntime({ ...runtime, sourceRef })
 }
@@ -853,14 +780,8 @@ async function repair() {
     const report = message => { busy = message; refreshTray() }
     const installText = installMessages(runtime.locale)
     const registrySession = new RegistrySession(networkEnvironment, runtime.locale, registry => report(installText.switchingRegistry + ' ' + registry))
-    const restoreNativeOverride = await prepareWindowsNativeOverride(targetRuntime, runtime.installPath)
-    try {
-      const args = ['install', restoreNativeOverride === undefined ? '--frozen-lockfile' : '--no-frozen-lockfile']
-      await registrySession.run(environment => targetRuntime.runPnpm(args, runtime.installPath, report, { env: environment }))
-      await materializePlus(targetRuntime, runtime, registrySession, report)
-    } finally {
-      if (restoreNativeOverride !== undefined) await restoreNativeOverride()
-    }
+    await registrySession.run(environment => targetRuntime.runPnpm(['install', '--no-frozen-lockfile'], runtime.installPath, report, { env: environment }))
+    await materializePlus(targetRuntime, runtime, registrySession, report)
     if (restart) await daemon.restart(false)
   })
 }

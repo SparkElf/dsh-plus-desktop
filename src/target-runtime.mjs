@@ -1,7 +1,6 @@
 import { spawn } from 'node:child_process'
 import { copyFile, lstat, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { connect } from 'node:net'
-import { createRequire } from 'node:module'
 import { dirname, join, posix } from 'node:path'
 import { decodeProcessOutput } from './process-output-encoding.mjs'
 
@@ -29,8 +28,6 @@ export function hiddenBuildSteps(installPath, pathJoin = join) {
 const COMMAND_TIMEOUT_MS = 15 * 60_000
 const CONNECT_TIMEOUT_MS = 30_000
 const targetEnvironmentKeys = ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'NO_PROXY', 'http_proxy', 'https_proxy', 'all_proxy', 'no_proxy', 'pnpm_config_registry', 'DSH_HOME']
-const workspaceRequire = createRequire(import.meta.url)
-const bundledPnpmCli = join(dirname(workspaceRequire.resolve('pnpm')), 'bin', 'pnpm.mjs')
 
 function execute(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -162,12 +159,7 @@ export class TargetRuntime {
   runPnpm(args, cwd, report, options = {}) {
     if (this.isWsl) return this.run('corepack', ['pnpm', ...args], cwd, report, options)
     if (this.toolchain !== undefined) return execute(this.toolchain.node, [this.toolchain.pnpm, ...args], { ...options, cwd, report, env: { ...process.env, ...options.env } })
-    return execute(process.execPath, [bundledPnpmCli, ...args], {
-      ...options,
-      cwd,
-      report,
-      env: { ...process.env, ...options.env, ELECTRON_RUN_AS_NODE: '1' },
-    })
+    return execute('pnpm', args, { ...options, cwd, report, env: { ...process.env, ...options.env } })
   }
 
   async installationDirectoryState(path) {
