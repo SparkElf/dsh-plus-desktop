@@ -9,13 +9,13 @@ English | [中文](README.zh.md)
 
 ## Install
 
-Desktop 0.2.0-rc.5 is the installable companion for `@sparkelf/dsh-plus@0.1.0-rc.22`. Download the platform installer from the matching GitHub Release:
+Desktop 0.2.0-rc.6 is the installable companion for `@sparkelf/dsh-plus@0.1.0-rc.23`. Download the platform installer from the matching GitHub Release:
 
 - Windows x64: `DeepSeek.Harness.Plus.Setup.0.2.0-rc.5.exe`
 - Linux x64: `deepseek-harness-plus-0.2.0-rc.5.AppImage`
 - Debian/Ubuntu x64: `deepseek-harness-plus-0.2.0-rc.5.deb`
 
-The first-run wizard selects an installation directory, ports, proxy, model provider, and API credential. It clones the official DeepSeek Harness revision `d347e703908d0406b7a7ef80e3a0e594d86b2215`, installs the exact Plus distribution, applies its source patches, performs an official build, writes the isolated DSH home, and starts the external Supervisor. Existing user settings and data remain under the selected installation's `.dsh-plus/home`.
+The first-run wizard selects an installation directory, ports, proxy, model provider, and API credential. It clones the official DeepSeek Harness revision `5dda764ed3aa172535a7967b06ff95d9cbfe536a`, installs the Plus distribution from the registry, applies its source patches, performs an official build, writes the isolated DSH home, and starts the external Supervisor. Existing user settings and data remain under the selected installation's `.dsh-plus/home`.
 
 On Windows, the wizard detects Git, Node.js/npm, and pnpm in the system environment. Compatible versions are reused. Missing or incompatible versions open a choice to update the system installation or keep the existing tools and install recommended versions side-by-side. The wizard downloads the official Git for Windows 2.55.0.5 and Node.js 24.20.0 installers, prefers mainland mirrors in Chinese mode, verifies their SHA-256, requests one UAC elevation, updates the system PATH, and records the selected executable paths for Harness builds.
 
@@ -23,8 +23,8 @@ On Windows, the wizard detects Git, Node.js/npm, and pnpm in the system environm
 
 This Desktop build has one immutable runtime selection:
 
-- Plus distribution: `@sparkelf/dsh-plus@0.1.0-rc.22`
-- Official source: `d347e703908d0406b7a7ef80e3a0e594d86b2215`
+- Plus distribution: `@sparkelf/dsh-plus@0.1.0-rc.23`
+- Official source: `5dda764ed3aa172535a7967b06ff95d9cbfe536a`
 - Supervisor: `@sparkelf/dsh-plugin-supervisor@0.1.3`
 - Recommended Git: `Git for Windows 2.55.0.5 x64`
 - Recommended Node.js/npm: `Node.js 24.20.0 x64`
