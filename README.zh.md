@@ -9,13 +9,13 @@ kind: "product-reference"
 
 ## 安装
 
-Desktop 0.2.0-rc.8是`@sparkelf/dsh-plus@0.1.0-rc.25`对应的可安装桌面端。请从配套GitHub Release下载对应平台安装包：
+Desktop 0.2.0-rc.9是`@sparkelf/dsh-plus@0.1.0-rc.26`对应的可安装桌面端。请从配套GitHub Release下载对应平台安装包：
 
 - Windows x64：`DeepSeek.Harness.Plus.Setup.0.2.0-rc.5.exe`
 - Linux x64：`deepseek-harness-plus-0.2.0-rc.5.AppImage`
 - Debian/Ubuntu x64：`deepseek-harness-plus-0.2.0-rc.5.deb`
 
-首次启动向导会选择安装目录、端口、代理、模型提供方和API凭据。它克隆official DeepSeek Harness revision `183f08e9c6dde7e36cd2318eaee70b0da08fb35e`，从registry安装Plus distribution，应用source patches，执行official build，写入隔离DSH home，并启动外部Supervisor。既有用户settings与data保留在所选安装目录的`.dsh-plus/home`中。
+首次启动向导会选择安装目录、端口、代理、模型提供方和API凭据。它克隆official DeepSeek Harness revision `fb2c4b9e698e30edb738bca4cf0618587db7d203`，从registry安装Plus distribution，应用source patches，执行official build，写入隔离DSH home，并启动外部Supervisor。既有用户settings与data保留在所选安装目录的`.dsh-plus/home`中。
 
 Windows向导检测系统Git、Node.js/npm与pnpm。兼容版本直接复用；缺失或版本冲突时，用户选择更新系统安装，或保留现有版本并并行安装推荐版本。向导下载官方Git for Windows 2.55.0.5和Node.js 24.20.0安装包；中文模式优先大陆镜像；SHA-256通过后请求一次UAC权限、更新系统PATH，并记录Harness构建使用的绝对路径。
 
@@ -23,8 +23,8 @@ Windows向导检测系统Git、Node.js/npm与pnpm。兼容版本直接复用；�
 
 本Desktop build只有一个不可变runtime selection：
 
-- Plus distribution：`@sparkelf/dsh-plus@0.1.0-rc.25`
-- Official source：`183f08e9c6dde7e36cd2318eaee70b0da08fb35e`
+- Plus distribution：`@sparkelf/dsh-plus@0.1.0-rc.26`
+- Official source：`fb2c4b9e698e30edb738bca4cf0618587db7d203`
 - Supervisor：`@sparkelf/dsh-plugin-supervisor@0.1.3`
 - 推荐Git：`Git for Windows 2.55.0.5 x64`
 - 推荐Node.js/npm：`Node.js 24.20.0 x64`
