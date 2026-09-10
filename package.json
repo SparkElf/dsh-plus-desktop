@@ -1,7 +1,7 @@
 {
   "name": "@sparkelf/dsh-plus-desktop",
-  "version": "0.2.0-rc.8",
-  "description": "Installable Electron desktop for DeepSeek Harness Plus 0.1.0-rc.25",
+  "version": "0.2.0-rc.9",
+  "description": "Installable Electron desktop for DeepSeek Harness Plus 0.1.0-rc.26",
   "type": "module",
   "main": "./runtime/main.mjs",
   "exports": {

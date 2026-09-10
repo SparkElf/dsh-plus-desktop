@@ -10,7 +10,7 @@ Desktop installer之前携带大型Plus package closure、预编译fs-ext archiv
 
 ## Decision
 
-Desktop安装exact official DSH 0.1.5-rc.1 source revision，并在profile materialization期间从npm解析@sparkelf/dsh-plus@0.1.0-rc.25。原生Windows target的Git、Node.js、npm与pnpm仍属于system toolchain requirement。Desktop package只保留Supervisor runtime与Electron assets，不携带普通Plus tarball、fs-ext prebuild、pnpm bundle或source closure resource。
+Desktop安装exact official DSH 0.1.5-rc.2 source revision，并在profile materialization期间从npm解析@sparkelf/dsh-plus@0.1.0-rc.26。原生Windows target的Git、Node.js、npm与pnpm仍属于system toolchain requirement。Desktop package只保留Supervisor runtime与Electron assets，不携带普通Plus tarball、fs-ext prebuild、pnpm bundle或source closure resource。
 
 Installer写入最小profile manifest，执行system pnpm commands，应用Plus profile并构建selected official source checkout。Retry path从已写入的manifest重新执行install，使中断的dependency download可恢复。
 
