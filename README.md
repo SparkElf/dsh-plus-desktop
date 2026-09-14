@@ -9,11 +9,11 @@ English | [中文](README.zh.md)
 
 ## Install
 
-Desktop 0.2.0-rc.9 is the installable companion for `@sparkelf/dsh-plus@0.1.0-rc.26`. Download the platform installer from the matching GitHub Release:
+Desktop 0.2.0-rc.10 is the installable companion for `@sparkelf/dsh-plus@0.1.0-rc.30`. Download the platform installer from the matching GitHub Release:
 
-- Windows x64: `DeepSeek.Harness.Plus.Setup.0.2.0-rc.5.exe`
-- Linux x64: `deepseek-harness-plus-0.2.0-rc.5.AppImage`
-- Debian/Ubuntu x64: `deepseek-harness-plus-0.2.0-rc.5.deb`
+- Windows x64: `DeepSeek.Harness.Plus.Setup.0.2.0-rc.10.exe`
+- Linux x64: `deepseek-harness-plus-0.2.0-rc.10.AppImage`
+- Debian/Ubuntu x64: `deepseek-harness-plus-0.2.0-rc.10.deb`
 
 The first-run wizard selects an installation directory, ports, proxy, model provider, and API credential. It clones the official DeepSeek Harness revision `fb2c4b9e698e30edb738bca4cf0618587db7d203`, installs the Plus distribution from the registry, applies its source patches, performs an official build, writes the isolated DSH home, and starts the external Supervisor. Existing user settings and data remain under the selected installation's `.dsh-plus/home`.
 
@@ -23,7 +23,7 @@ On Windows, the wizard detects Git, Node.js/npm, and pnpm in the system environm
 
 This Desktop build has one immutable runtime selection:
 
-- Plus distribution: `@sparkelf/dsh-plus@0.1.0-rc.26`
+- Plus distribution: `@sparkelf/dsh-plus@0.1.0-rc.30`
 - Official source: `fb2c4b9e698e30edb738bca4cf0618587db7d203`
 - Supervisor: `@sparkelf/dsh-plugin-supervisor@0.1.3`
 - Recommended Git: `Git for Windows 2.55.0.5 x64`
@@ -42,7 +42,7 @@ The required CI runs the tray API test, npm pack boundary check, Electron instal
 
 ## Known Limitations
 
-- 0.2.0-rc.5 installers are unsigned prerelease artifacts; Windows SmartScreen or Linux desktop security may require explicit confirmation.
+- 0.2.0-rc.10 installers are unsigned prerelease artifacts; Windows SmartScreen or Linux desktop security may require explicit confirmation.
 - macOS packaging remains disabled until the release has a signing and notarization identity.
 - First installation compiles the official Harness source on the target machine and therefore takes longer than an application-only installer.
 - Native Windows installation writes or reuses a system toolchain. The advanced WSL target still requires Git and Node.js inside the selected distribution.

@@ -1,7 +1,7 @@
 /** Immutable Plus profile release installed by this Desktop build. */
 export const OFFICIAL_REPOSITORY = 'https://github.com/deepseek-ai/deepseek-harness.git'
 export const OFFICIAL_SOURCE_REVISION = 'fb2c4b9e698e30edb738bca4cf0618587db7d203'
-export const PLUS_DISTRIBUTION = '@sparkelf/dsh-plus@0.1.0-rc.26'
+export const PLUS_DISTRIBUTION = '@sparkelf/dsh-plus@0.1.0-rc.30'
 
 /**
  * Build the profile-local commands that install and apply the Plus distribution from the registry.
